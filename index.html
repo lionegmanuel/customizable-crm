@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Velinex CRM</title>
+    <link rel="stylesheet" href="styles/main.css" />
+  </head>
+  <body>
+    <header class="topbar" role="banner">
+      <div class="topbar-left">
+        <div class="logo" aria-label="Velinex CRM">
+          <div class="logo-mark" aria-hidden="true">V</div>
+          <span class="logo-text">Velinex CRM</span>
+        </div>
+        <nav class="tabs" role="tablist" aria-label="Vistas principales">
+          <button
+            class="tab active"
+            role="tab"
+            aria-selected="true"
+            data-tab="pipeline"
+          >
+            Pipeline
+          </button>
+          <button class="tab" role="tab" aria-selected="false" data-tab="leads">
+            Leads
+          </button>
+          <button
+            class="tab"
+            role="tab"
+            aria-selected="false"
+            data-tab="metricas"
+          >
+            Métricas
+          </button>
+          <button
+            class="tab"
+            role="tab"
+            aria-selected="false"
+            data-tab="settings"
+          >
+            ⚙ Configuración
+          </button>
+        </nav>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn--primary" id="btn-new-lead">+ Nuevo lead</button>
+      </div>
+    </header>
+    <main class="content" id="main-content" role="main">
+      <div
+        id="view-pipeline"
+        class="view view--active"
+        role="tabpanel"
+        aria-labelledby="tab-pipeline"
+      ></div>
+      <div
+        id="view-leads"
+        class="view"
+        role="tabpanel"
+        aria-labelledby="tab-leads"
+      ></div>
+      <div
+        id="view-metricas"
+        class="view"
+        role="tabpanel"
+        aria-labelledby="tab-metricas"
+      ></div>
+      <div id="view-settings" class="view" role="tabpanel"></div>
+    </main>
+    <div id="portal-panel" aria-live="polite"></div>
+    <div
+      id="portal-toast"
+      class="toast-wrap"
+      aria-live="assertive"
+      aria-atomic="true"
+    ></div>
+    <div id="portal-confirm" role="alertdialog" aria-modal="true"></div>
+    <script src="js/config.js"></script>
+    <script src="js/store.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/components/pipeline.js"></script>
+    <script src="js/components/leads.js"></script>
+    <script src="js/components/metrics.js"></script>
+    <script src="js/components/panel.js"></script>
+    <script src="js/components/settings.js"></script>
+    <script src="js/app.js"></script>
+  </body>
+</html>

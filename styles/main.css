@@ -1,0 +1,1043 @@
+/* ============================================================
+   pendiente generar todos estos tokens por tenant (white-label).
+   ============================================================ */
+:root {
+  /* Backgrounds */
+  --bg-app: #0f0f13;
+  --bg-surface: #17171f;
+  --bg-raised: #1e1e28;
+  --bg-card: #1a1a24;
+
+  /* Borders */
+  --border: #2a2a38;
+  --border-hover: #3a3a50;
+  --border-focus: var(--accent);
+
+  /* Text */
+  --text-primary: #f0f0f8;
+  --text-secondary: #8888a8;
+  --text-tertiary: #55556a;
+
+  /* Accent */
+  --accent: #7c6fe0;
+  --accent-hover: #6a5ecb;
+  --accent-dim: rgba(124, 111, 224, 0.12);
+  --accent-light: #a89ff0;
+
+  /* Semantic */
+  --green: #2db87a;
+  --green-dim: rgba(45, 184, 122, 0.12);
+  --amber: #e09c3e;
+  --amber-dim: rgba(224, 156, 62, 0.12);
+  --red: #e05555;
+  --red-dim: rgba(224, 85, 85, 0.12);
+  --blue: #4a9edd;
+  --blue-dim: rgba(74, 158, 221, 0.12);
+
+  /* Integrations */
+  --color-wa: #25d366;
+  --color-ig: #e1306c;
+
+  /* Spacing scale */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+
+  /* Radius */
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+
+  /* Topbar */
+  --topbar-h: 52px;
+
+  /* Typography */
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-size-base: 14px;
+}
+
+/* ============================================================
+   2. RESET & BASE
+   ============================================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: var(--font-size-base);
+}
+
+body {
+  font-family: var(--font);
+  background: var(--bg-app);
+  color: var(--text-primary);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font-family: var(--font);
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  font-family: var(--font);
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ============================================================
+   3. LAYOUT
+   ============================================================ */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--topbar-h);
+  padding: 0 var(--sp-5);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.content {
+  padding: 18px var(--sp-5);
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.view {
+  display: none;
+}
+.view--active {
+  display: block;
+}
+
+/* ============================================================
+   4. COMPONENTS — Logo
+   ============================================================ */
+.logo {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+
+.logo-mark {
+  width: 26px;
+  height: 26px;
+  background: var(--accent);
+  border-radius: var(--r-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   5. COMPONENTS — Tabs
+   ============================================================ */
+.tabs {
+  display: flex;
+  gap: 1px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 3px;
+}
+
+.tab {
+  padding: 5px 16px;
+  border-radius: var(--r-sm);
+  border: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+}
+
+.tab:hover:not(.active) {
+  color: var(--text-primary);
+}
+
+.tab.active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================================
+   6. COMPONENTS — Buttons
+   ============================================================ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: 6px 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--border);
+  background: transparent;
+  font-size: 13px;
+  color: var(--text-primary);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.btn:hover {
+  background: var(--bg-raised);
+  border-color: var(--border-hover);
+}
+
+.btn--primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 500;
+}
+.btn--primary:hover {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn--sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.btn--danger {
+  color: var(--red);
+  border-color: var(--red-dim);
+}
+.btn--danger:hover {
+  background: var(--red-dim);
+}
+
+.btn--wa {
+  background: var(--color-wa);
+  border-color: var(--color-wa);
+  color: #fff;
+}
+.btn--wa:hover {
+  background: #1eb85a;
+}
+
+.btn--ig {
+  background: var(--color-ig);
+  border-color: var(--color-ig);
+  color: #fff;
+}
+.btn--ig:hover {
+  background: #c4245a;
+}
+
+/* ============================================================
+   7. COMPONENTS — Metric cards
+   ============================================================ */
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.metric-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: 14px 16px;
+}
+
+.metric-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.metric-val {
+  font-size: 24px;
+  font-weight: 600;
+}
+.metric-val--purple {
+  color: var(--accent-light);
+}
+.metric-val--green {
+  color: var(--green);
+}
+.metric-val--amber {
+  color: var(--amber);
+}
+.metric-val--red {
+  color: var(--red);
+}
+
+/* ============================================================
+   8. COMPONENTS — Kanban
+   ============================================================ */
+.kanban-wrap {
+  overflow-x: auto;
+  padding-bottom: 10px;
+}
+
+.kanban {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  min-width: max-content;
+}
+
+.kanban-col {
+  width: 210px;
+  flex-shrink: 0;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-3);
+}
+
+.kanban-col-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.kanban-col-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 6px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+.kanban-col-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.kanban-col-value {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  padding-left: 14px;
+}
+
+.kanban-col-count {
+  font-size: 11px;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1px 8px;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.drop-zone {
+  min-height: 36px;
+  border-radius: var(--r-sm);
+  border: 2px dashed transparent;
+  transition: all 0.15s;
+  padding: 2px;
+}
+
+.drop-zone--over {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+}
+
+/* ============================================================
+   9. COMPONENTS — Lead card (Kanban)
+   ============================================================ */
+.lead-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 10px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.lead-card:last-child {
+  margin-bottom: 0;
+}
+.lead-card:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-1px);
+}
+.lead-card.is-dragging {
+  opacity: 0.4;
+  transform: scale(0.97);
+}
+.lead-card.is-drag-over {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
+
+.lead-card-name {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lead-card-nicho {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.lead-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.lead-card-ticket {
+  font-size: 11px;
+  color: var(--green);
+  font-weight: 500;
+}
+
+.lead-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+/* ============================================================
+   10. COMPONENTS — Table
+   ============================================================ */
+.panel-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.search-row {
+  display: flex;
+  gap: var(--sp-2);
+  margin-bottom: 14px;
+}
+
+.search-row input {
+  flex: 1;
+}
+.search-row select {
+  width: 180px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th {
+  text-align: left;
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-raised);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+
+td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+tr:last-child td {
+  border-bottom: none;
+}
+tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+tbody tr {
+  cursor: pointer;
+}
+
+/* ============================================================
+   11. COMPONENTS — Badges
+   ============================================================ */
+.stage-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.priority-badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+
+.priority-badge--alta {
+  background: var(--red-dim);
+  color: var(--red);
+}
+.priority-badge--media {
+  background: var(--amber-dim);
+  color: var(--amber);
+}
+.priority-badge--baja {
+  background: var(--green-dim);
+  color: var(--green);
+}
+
+.temp-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.temp-dot--frio {
+  background: var(--text-tertiary);
+}
+.temp-dot--tibio {
+  background: var(--amber);
+}
+.temp-dot--caliente {
+  background: var(--green);
+}
+
+.alert-days {
+  color: var(--amber);
+}
+
+/* ============================================================
+   12. COMPONENTS — Side panel
+   ============================================================ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  z-index: 100;
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.panel {
+  width: min(520px, 100vw);
+  height: 100vh;
+  background: var(--bg-surface);
+  border-left: 1px solid var(--border);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(40px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px var(--sp-5);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--bg-surface);
+  z-index: 1;
+}
+
+.panel-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+.panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.panel-body {
+  padding: var(--sp-5);
+  flex: 1;
+}
+
+.panel-footer {
+  padding: 14px var(--sp-5);
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: var(--sp-2);
+  position: sticky;
+  bottom: 0;
+  background: var(--bg-surface);
+  flex-wrap: wrap;
+}
+
+.close-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  font-size: 16px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  line-height: 1;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.close-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
+/* ============================================================
+   13. COMPONENTS — Form inputs
+   ============================================================ */
+input,
+select,
+textarea {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 8px 11px;
+  font-size: 13px;
+  color: var(--text-primary);
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--border-focus);
+}
+input::placeholder {
+  color: var(--text-tertiary);
+}
+textarea {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.5;
+}
+select option {
+  background: var(--bg-raised);
+}
+
+.field-group {
+  margin-bottom: 13px;
+}
+
+.field-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 5px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  display: block;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.stage-select-footer {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 120px;
+  outline: none;
+  cursor: pointer;
+}
+
+.stage-select-footer:focus {
+  border-color: var(--accent);
+}
+
+/* ============================================================
+   14. COMPONENTS — Read view (panel detail)
+   ============================================================ */
+.read-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  align-items: start;
+}
+
+.read-row:last-child {
+  border-bottom: none;
+}
+.read-key {
+  color: var(--text-secondary);
+}
+.read-val {
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+/* ============================================================
+   15. COMPONENTS — Timeline
+   ============================================================ */
+.section-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 18px 0 10px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--border);
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tl-item {
+  display: flex;
+  gap: 10px;
+}
+
+.tl-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-top: 5px;
+  flex-shrink: 0;
+  border: 2px solid var(--bg-surface);
+}
+
+.tl-content {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+.tl-date {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+/* ============================================================
+   16. COMPONENTS — Metrics bars
+   ============================================================ */
+.bar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.bar-track {
+  height: 6px;
+  background: var(--bg-raised);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease-out;
+}
+
+.alert-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+
+.alert-row:last-child {
+  border-bottom: none;
+}
+
+/* ============================================================
+   17. COMPONENTS — Toast
+   ============================================================ */
+.toast-wrap {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  z-index: 200;
+  pointer-events: none;
+}
+
+.toast {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  padding: 10px 16px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  animation: toastIn 0.2s ease-out;
+  max-width: 280px;
+  pointer-events: auto;
+}
+
+.toast--success {
+  border-color: var(--green);
+  color: var(--green);
+}
+.toast--danger {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+@keyframes toastIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================
+   18. COMPONENTS — Confirm dialog
+   ============================================================ */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  backdrop-filter: blur(3px);
+}
+
+.confirm-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  padding: var(--sp-6);
+  max-width: 320px;
+  width: 90%;
+  animation: popIn 0.2s ease-out;
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    scale: 0.95;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+.confirm-box h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.confirm-box p {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.confirm-btns {
+  display: flex;
+  gap: var(--sp-2);
+  justify-content: flex-end;
+}
+
+/* ============================================================
+   19. UTILITIES
+   ============================================================ */
+.empty {
+  text-align: center;
+  padding: 48px var(--sp-5);
+  color: var(--text-tertiary);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.empty strong {
+  display: block;
+  font-size: 15px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.flex-center {
+  display: flex;
+  align-items: center;
+}
+.gap-sm {
+  gap: var(--sp-2);
+}
+.gap-md {
+  gap: var(--sp-3);
+}
+.text-muted {
+  color: var(--text-secondary);
+}
+.text-tiny {
+  font-size: 11px;
+}
+.text-sm {
+  font-size: 12px;
+}
+.truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mb-md {
+  margin-bottom: 14px;
+}
+.actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+/* ============================================================
+   20. RESPONSIVE
+   ============================================================ */
+@media (max-width: 768px) {
+  .field-row {
+    grid-template-columns: 1fr;
+  }
+  .metrics-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .topbar {
+    padding: 0 var(--sp-3);
+  }
+  .content {
+    padding: var(--sp-3);
+  }
+  .logo-text {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .metrics-row {
+    grid-template-columns: 1fr;
+  }
+  .search-row {
+    flex-direction: column;
+  }
+  .search-row select {
+    width: 100%;
+  }
+}
