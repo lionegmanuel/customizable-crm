@@ -18,16 +18,35 @@ const App = (() => {
     metricas: { id: "metricas", component: MetricsView },
     settings: { id: "settings", component: SettingsView },
   };
-
   let _currentView = "pipeline";
-
-  /* ─── Bootstrap ─── */
-
   function init() {
+    AuthService.init({
+      onLogin: (user) => _onUserLogin(user),
+      onLogout: () => _onUserLogout(),
+    });
+  }
+
+  async function _onUserLogin(user) {
+    // datos actuales del usuario
+    const chip = document.getElementById("user-chip");
+    if (chip) {
+      const name = user.displayName || user.email.split("@")[0];
+      chip.innerHTML = `<span class="user-avatar">${name.charAt(0).toUpperCase()}</span><span class="user-name">${name}</span>`;
+    }
+    // inicializar store con datos del usuario
+    await Store.init();
+    // inicializar componentes y UI
     _initComponents();
     _attachGlobalHandlers();
     _subscribeToStore();
-    Store.init();
+    setView("pipeline");
+  }
+  function _onUserLogout() {
+    // limpieza del estado actual estado
+    document.getElementById("view-pipeline").innerHTML = "";
+    document.getElementById("view-leads").innerHTML = "";
+    document.getElementById("view-metricas").innerHTML = "";
+    document.getElementById("view-settings").innerHTML = "";
   }
 
   function _initComponents() {
@@ -59,6 +78,12 @@ const App = (() => {
     // Teclado: Escape cierra panel
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape") Panel.close();
+    });
+    //logout
+    document.getElementById("btn-logout")?.addEventListener("click", () => {
+      App.showConfirm("Cerrar sesión", "¿Querés cerrar sesión?", () =>
+        AuthService.logout(),
+      );
     });
   }
 

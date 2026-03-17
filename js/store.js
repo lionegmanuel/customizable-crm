@@ -13,22 +13,51 @@ const Store = (() => {
 
   /* ─── Persistencia ─── */
 
-  function _hydrate() {
-    try {
-      const raw = localStorage.getItem(CRM_CONFIG.STORAGE_KEY);
-      if (raw) _leads = JSON.parse(raw);
-    } catch (e) {
-      console.warn("[Store] Error al cargar datos:", e);
-      _leads = [];
-    }
+  function _getCollection() {
+    const user = AuthService.currentUser();
+    if (!user) return null;
+    return DB.collection("users").doc(user.uid).collection("leads");
   }
 
-  function _persist() {
+  async function _hydrate() {
+    const col = _getCollection();
+    if (!col) {
+      _leads = [];
+      _notify("init", null);
+      return;
+    }
     try {
+      const snapshot = await col.orderBy("createdAt", "desc").get();
+      _leads = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    } catch (e) {
+      console.warn("[Store] Firestore error, fallback localStorage:", e);
+      const raw = localStorage.getItem(CRM_CONFIG.STORAGE_KEY);
+      _leads = raw ? JSON.parse(raw) : [];
+    }
+    _notify("init", null);
+  }
+
+  async function _persist(changedLead = null) {
+    const col = _getCollection();
+    if (!col) return;
+    try {
+      if (changedLead) {
+        // Upsert solo el lead modificado — más eficiente
+        const { id, ...data } = changedLead;
+        await col.doc(id).set(data);
+      } else {
+        // Sync completo (usado en import)
+        const batch = DB.batch();
+        _leads.forEach((l) => {
+          const { id, ...data } = l;
+          batch.set(col.doc(id), data);
+        });
+        await batch.commit();
+      }
       localStorage.setItem(CRM_CONFIG.STORAGE_KEY, JSON.stringify(_leads));
     } catch (e) {
-      console.error("[Store] Error al guardar. Storage lleno?", e);
-      _notify("error", "Error al guardar. Almacenamiento lleno.");
+      console.error("[Store] Error Firestore:", e);
+      localStorage.setItem(CRM_CONFIG.STORAGE_KEY, JSON.stringify(_leads));
     }
   }
 
@@ -94,7 +123,7 @@ const Store = (() => {
       timeline: [{ text: "Lead creado", date: now }],
     };
     _leads.unshift(lead);
-    _persist();
+    _persist({ ...lead });
     _notify("create", lead);
     return { ...lead };
   }
@@ -121,7 +150,7 @@ const Store = (() => {
       ];
     }
 
-    _persist();
+    _persist({ ..._leads[idx] });
     _notify("update", { ..._leads[idx] });
     return { ..._leads[idx] };
   }
@@ -145,7 +174,7 @@ const Store = (() => {
       { text, date: now },
     ];
     _leads[idx].lastActivity = now;
-    _persist();
+    _persist({ ..._leads[idx] });
     _notify("activity", { id, text });
     return { ..._leads[idx] };
   }
@@ -157,6 +186,13 @@ const Store = (() => {
     const existed = _leads.some((l) => l.id === id);
     if (!existed) return false;
     _leads = _leads.filter((l) => l.id !== id);
+    //eliminar el doc en firestore
+    const col = _getCollection();
+    if (col)
+      coldoc(id)
+        .delete()
+        .catch((e) => console.error("[Store] delete error:", e));
+    localStorage.setItem(CRM_CONFIG.STORAGE_KEY, JSON.stringify(_leads));
     _persist();
     _notify("remove", { id });
     return true;
@@ -193,15 +229,24 @@ const Store = (() => {
       return matchSearch && matchStage && matchNicho;
     });
   }
-  function _loadSettings() {
+  async function _loadSettings() {
+    const user = AuthService.currentUser();
+    if (!user) {
+      _settings = _defaultSettings();
+      return;
+    }
     try {
+      const doc = await DB.collection("users")
+        .doc(user.uid)
+        .collection("settings")
+        .doc("main")
+        .get();
+      _settings = doc.exists ? doc.data() : _defaultSettings();
+    } catch (e) {
       const raw = localStorage.getItem(SETTINGS_KEY);
       _settings = raw ? JSON.parse(raw) : _defaultSettings();
-    } catch (e) {
-      _settings = _defaultSettings();
     }
   }
-
   function _defaultSettings() {
     return {
       stages: CRM_CONFIG.DEFAULTS.STAGES.map((s) => ({ ...s })),
@@ -221,6 +266,15 @@ const Store = (() => {
   function saveSettings(newSettings) {
     _settings = { ..._settings, ...newSettings };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(_settings));
+    const user = AuthService.currentUser();
+    if (user) {
+      DB.collection("users")
+        .doc(user.uid)
+        .collection("settings")
+        .doc("main")
+        .set(_settings)
+        .catch((e) => console.error("[Store] settings sync error:", e));
+    }
     _notify("settings", null);
   }
 
