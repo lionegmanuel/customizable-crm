@@ -30,6 +30,7 @@ const SettingsView = (() => {
             ["canales", "Canales"],
             ["prioridades", "Prioridades"],
             ["temperaturas", "Temperaturas"],
+            ['ticket','Ticket'],
           ]
             .map(
               ([id, label]) =>
@@ -85,13 +86,14 @@ const SettingsView = (() => {
 
   /* ─── Listas simples ─── */
 
-  function _renderList(field, items) {
+  function _renderList(field, items = []) {
     const labels = {
       nichos: "Nichos",
       subnichos: "Sub-nichos",
       canales: "Canales de contacto",
       prioridades: "Prioridades",
       temperaturas: "Temperaturas",
+      ticket: "Ticket",
     };
 
     const rows = items

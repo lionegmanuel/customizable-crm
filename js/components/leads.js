@@ -98,6 +98,7 @@ const LeadsView = (() => {
             <th>Etapa</th>
             <th>WA</th>
             <th>Ticket</th>
+            <th>Ticket (USD)</th>
             <th>Temperatura</th>
             <th>Prioridad</th>
             <th>Última act.</th>
@@ -124,7 +125,11 @@ const LeadsView = (() => {
            ${Utils.esc(lead.temperatura)}
          </span>`
       : "—";
-
+    const ticketHtml = lead.ticket ? `<span style="display:flex;align-items:center;gap:5px">
+           ${Utils.ticketHtml(lead.ticket)}
+           ${Utils.esc(lead.ticket)}
+         </span>`
+      : "—";
     const prioHtml = lead.prioridad
       ? `<span class="${Utils.priorityClass(lead.prioridad)}">${Utils.esc(lead.prioridad)}</span>`
       : "—";
@@ -134,6 +139,7 @@ const LeadsView = (() => {
       <td class="text-muted">${Utils.esc(lead.nicho || "—")}</td>
       <td>${Utils.stageBadgeHtml(lead.stage)}</td>
       <td>${waBtn}</td>
+      <td>${ticketHtml}
       <td style="color:var(--green);font-weight:500">${lead.ticket ? Utils.fmtCurrency(lead.ticket) : "—"}</td>
       <td>${tempHtml}</td>
       <td>${prioHtml}</td>

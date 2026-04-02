@@ -90,10 +90,10 @@ const Store = (() => {
 
   /* ─── API pública ─── */
 
-  function init() {
-    _loadSettings();
-    _hydrate();
-    _notify("init", null);
+  async function init() {
+    await _loadSettings();
+    await _hydrate();
+    //_notify("init", null); _hydrate ya llama a _notify("init") internamente
   }
 
   function getAll() {
@@ -255,16 +255,27 @@ const Store = (() => {
       canales: [...CRM_CONFIG.DEFAULTS.CANALES],
       prioridades: [...CRM_CONFIG.DEFAULTS.PRIORIDADES],
       temperaturas: [...CRM_CONFIG.DEFAULTS.TEMPERATURAS],
+      ticket: [...CRM_CONFIG.DEFAULTS.TICKET],
       followupDays: CRM_CONFIG.FOLLOWUP_THRESHOLD_DAYS,
     };
   }
 
   function getSettings() {
-    return { ..._settings, stages: _settings.stages.map((s) => ({ ...s })) };
+    const defaults = _defaultSettings();
+    const merged = { ...defaults, ..._settings };
+    // Garantiza que cada key del default exista aunque los settings guardados sean viejos
+    Object.keys(defaults).forEach(key => {
+      if (!merged[key] || (Array.isArray(merged[key]) && merged[key].length === 0)) {
+        merged[key] = defaults[key];
+      }
+    });
+    merged.stages = (merged.stages || defaults.stages).map(s => ({ ...s }));
+    return merged;
   }
 
   function saveSettings(newSettings) {
-    _settings = { ..._settings, ...newSettings };
+    const defaults = _defaultSettings();
+    _settings = { ...defaults, ..._settings, ...newSettings };
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(_settings));
     const user = AuthService.currentUser();
     if (user) {

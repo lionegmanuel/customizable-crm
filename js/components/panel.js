@@ -103,6 +103,7 @@ const Panel = (() => {
       ["Sub-nicho", Utils.esc(lead.subnicho || "—")],
       ["Canal", Utils.esc(lead.canal || "—")],
       ["Ticket estimado", lead.ticket ? Utils.fmtCurrency(lead.ticket) : "—"],
+      ["Ticket", Utils.esc(lead.ticketRango || "—")],
       [
         "Temperatura",
         lead.temperatura
@@ -198,6 +199,15 @@ const Panel = (() => {
           <label class="field-label" for="f-ticket">Ticket estimado (USD)</label>
           <input id="f-ticket" type="number" value="${lead.ticket || ""}" placeholder="1500"/>
         </div>
+      </div>
+      <div class="field-group">
+        <label class="field-label" for="f-ticket-rango">Ticket</label>
+        <select id="f-ticket-rango">
+          <option value="">— Seleccionar —</option>
+          ${(Store.getSettings().ticket || []).map(t =>
+            `<option value="${t}" ${lead?.ticketRango === t ? 'selected' : ''}>${t}</option>`
+          ).join('')}
+        </select>
       </div>
       <div class="field-row">
         <div class="field-group">
@@ -334,6 +344,7 @@ const Panel = (() => {
       subnicho: get("f-sub")?.value || "",
       canal: get("f-canal")?.value || "",
       ticket: get("f-ticket")?.value || "",
+      ticketRango: get("f-ticket-rango")?.value || "",
       temperatura: get("f-temp")?.value || "Frío",
       prioridad: get("f-prio")?.value || "Media",
       seguidores: get("f-seg")?.value || "",

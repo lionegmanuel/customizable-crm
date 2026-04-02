@@ -54,7 +54,12 @@ const Utils = (() => {
     if (temperatura === "Tibio") return "temp-dot--tibio";
     return "temp-dot--frio";
   }
-
+  function ticketValue(ticket) {
+    if (ticket === 'Bajo') return "low-ticket"
+    if (ticket === 'Medio') return "mid-ticket"
+    if (ticket === 'Alto') return "high-ticket"
+    return 'unrecognizable';
+  }
   function priorityClass(prioridad) {
     const map = { Alta: "alta", Media: "media", Baja: "baja" };
     return `priority-badge priority-badge--${map[prioridad] || "media"}`;
@@ -118,6 +123,10 @@ const Utils = (() => {
     if (!temperatura) return "";
     return `<span class="temp-dot ${tempDotClass(temperatura)}"></span>`;
   }
+  function ticketHtml (ticket) {
+    if (!ticket) return;
+    return `<span class="ticket-value ${ticketValue(ticket)}"></span>`;
+  }
 
   /* ─── Exportar/Importar UI ─── */
 
@@ -154,12 +163,14 @@ const Utils = (() => {
     stageLabel,
     stageColor,
     tempDotClass,
+    ticketValue,
     priorityClass,
     esc,
     buildSelect,
     buildStageSelect,
     stageBadgeHtml,
     tempDotHtml,
+    ticketHtml,
     downloadFile,
     pickJsonFile,
   };

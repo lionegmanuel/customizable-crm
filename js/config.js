@@ -95,6 +95,7 @@ const CRM_CONFIG = Object.freeze({
     CANALES: ["WhatsApp", "Instagram DM", "LinkedIn", "Email", "Otro"],
     PRIORIDADES: ["Alta", "Media", "Baja"],
     TEMPERATURAS: ["Frío", "Tibio", "Caliente"],
+    TICKET: ['Bajo', 'Medio', 'Alto', 'Irreconocible']
   },
   FOLLOWUP_THRESHOLD_DAYS: 3,
 
