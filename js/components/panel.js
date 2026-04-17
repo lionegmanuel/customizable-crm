@@ -34,12 +34,25 @@ const Panel = (() => {
     _render(lead);
   }
 
-  function close() {
+  function _resetState() {
     const overlay = document.getElementById("portal-panel");
     if (overlay) overlay.innerHTML = "";
     _currentId = null;
     _mode = null;
-    if (_onClose) _onClose();
+  }
+
+  function close() {
+    const wasOpen = Boolean(_mode);
+    _resetState();
+    if (wasOpen && _onClose) _onClose();
+  }
+
+  function reset() {
+    _resetState();
+  }
+
+  function isOpen() {
+    return Boolean(_mode);
   }
 
   /* ─── Render ─── */
@@ -367,5 +380,5 @@ const Panel = (() => {
     }
   }
 
-  return { init, openNew, openLead, close };
+  return { init, openNew, openLead, close, reset, isOpen };
 })();

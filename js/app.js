@@ -19,6 +19,24 @@ const App = (() => {
     settings: { id: "settings", component: SettingsView },
   };
   let _currentView = "pipeline";
+  let _viewNeedsRender = _createDirtyMap();
+  let _renderQueued = false;
+  let _globalHandlersAttached = false;
+  let _unsubscribeStore = null;
+
+  function _createDirtyMap() {
+    return Object.keys(VIEWS).reduce((acc, id) => {
+      acc[id] = true;
+      return acc;
+    }, {});
+  }
+
+  function _markAllViewsDirty() {
+    Object.keys(_viewNeedsRender).forEach((id) => {
+      _viewNeedsRender[id] = true;
+    });
+  }
+
   function init() {
     AuthService.init({
       onLogin: (user) => _onUserLogin(user),
@@ -35,18 +53,32 @@ const App = (() => {
     }
     // inicializar store con datos del usuario
     await Store.init();
+    _markAllViewsDirty();
     // inicializar componentes y UI
     _initComponents();
     _attachGlobalHandlers();
     _subscribeToStore();
     setView("pipeline");
   }
+
   function _onUserLogout() {
+    if (_unsubscribeStore) {
+      _unsubscribeStore();
+      _unsubscribeStore = null;
+    }
+
+    Panel.reset();
+
     // limpieza del estado actual estado
     document.getElementById("view-pipeline").innerHTML = "";
     document.getElementById("view-leads").innerHTML = "";
     document.getElementById("view-metricas").innerHTML = "";
     document.getElementById("view-settings").innerHTML = "";
+    document.getElementById("portal-confirm").innerHTML = "";
+
+    _currentView = "pipeline";
+    _viewNeedsRender = _createDirtyMap();
+    _renderQueued = false;
   }
 
   function _initComponents() {
@@ -57,11 +89,18 @@ const App = (() => {
     PipelineView.init(callbacks);
     LeadsView.init(callbacks);
     MetricsView.init(callbacks);
-    Panel.init({ onClose: () => _renderCurrentView() });
+    Panel.init({
+      onClose: () => {
+        if (_viewNeedsRender[_currentView]) _queueRender();
+      },
+    });
     SettingsView.init();
   }
 
   function _attachGlobalHandlers() {
+    if (_globalHandlersAttached) return;
+    _globalHandlersAttached = true;
+
     // Tabs
     document.querySelectorAll(".tab").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -88,10 +127,14 @@ const App = (() => {
   }
 
   function _subscribeToStore() {
-    Store.subscribe((event) => {
+    if (_unsubscribeStore) _unsubscribeStore();
+
+    _unsubscribeStore = Store.subscribe(() => {
       // Cualquier cambio en el store re-renderiza la vista actual.
       // En SaaS con múltiples pestañas, aquí iría un WebSocket listener.
-      _renderCurrentView();
+      _markAllViewsDirty();
+      if (Panel.isOpen()) return;
+      _queueRender();
     });
   }
 
@@ -99,6 +142,8 @@ const App = (() => {
 
   function setView(viewId) {
     if (!VIEWS[viewId]) return;
+    const viewChanged = _currentView !== viewId;
+    if (!viewChanged && !_viewNeedsRender[viewId]) return;
     _currentView = viewId;
 
     // Actualizar tabs
@@ -113,12 +158,27 @@ const App = (() => {
       if (el) el.classList.toggle("view--active", id === viewId);
     });
 
-    _renderCurrentView();
+    if (viewChanged || _viewNeedsRender[_currentView]) _queueRender();
   }
 
-  function _renderCurrentView() {
+  function _queueRender(force = false) {
+    if (force) _viewNeedsRender[_currentView] = true;
+    if (_renderQueued) return;
+
+    _renderQueued = true;
+    requestAnimationFrame(() => {
+      _renderQueued = false;
+      _renderCurrentView();
+    });
+  }
+
+  function _renderCurrentView(force = false) {
     const view = VIEWS[_currentView];
-    if (view) view.component.render();
+    if (!view) return;
+    if (!force && !_viewNeedsRender[_currentView]) return;
+
+    view.component.render();
+    _viewNeedsRender[_currentView] = false;
   }
 
   /* ─── Global UI utilities ─── */

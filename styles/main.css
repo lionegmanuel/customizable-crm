@@ -471,11 +471,49 @@ textarea {
   display: flex;
   gap: var(--sp-2);
   margin-bottom: 14px;
+  align-items: center;
 }
 
-.search-row input {
+.search-input-wrap {
+  position: relative;
   flex: 1;
+  min-width: 220px;
 }
+
+.search-input-wrap input {
+  padding-right: 34px;
+}
+
+.search-clear-btn {
+  position: absolute;
+  top: 50%;
+  right: 7px;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: var(--bg-app);
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.search-clear-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-card);
+}
+
+.search-clear-btn:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .search-row select {
   width: 180px;
 }
@@ -1009,6 +1047,30 @@ select option {
   margin-bottom: 10px;
 }
 
+.pipeline-toolbar {
+  margin-bottom: 12px;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pipeline-toolbar-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 220px;
+  max-width: 560px;
+}
+
+.pipeline-toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.pipeline-results {
+  white-space: nowrap;
+}
+
 /* ============================================================
    20. RESPONSIVE
    ============================================================ */
@@ -1028,6 +1090,9 @@ select option {
   .logo-text {
     display: none;
   }
+  .pipeline-toolbar-main {
+    max-width: 100%;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1037,7 +1102,24 @@ select option {
   .search-row {
     flex-direction: column;
   }
+  .search-input-wrap {
+    width: 100%;
+  }
   .search-row select {
     width: 100%;
+  }
+  .pipeline-toolbar-main {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .pipeline-results {
+    white-space: normal;
+  }
+  .pipeline-toolbar-actions {
+    width: 100%;
+  }
+  .pipeline-toolbar-actions .btn {
+    flex: 1;
+    justify-content: center;
   }
 }

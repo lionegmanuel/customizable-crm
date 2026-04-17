@@ -10,6 +10,7 @@ const Store = (() => {
   /* ─── Estado privado ─── */
   let _leads = [];
   let _subscribers = [];
+  let _searchIndex = new Map();
 
   /* ─── Persistencia ─── */
 
@@ -23,6 +24,7 @@ const Store = (() => {
     const col = _getCollection();
     if (!col) {
       _leads = [];
+      _rebuildSearchIndex();
       _notify("init", null);
       return;
     }
@@ -34,6 +36,7 @@ const Store = (() => {
       const raw = localStorage.getItem(CRM_CONFIG.STORAGE_KEY);
       _leads = raw ? JSON.parse(raw) : [];
     }
+    _rebuildSearchIndex();
     _notify("init", null);
   }
 
@@ -88,6 +91,38 @@ const Store = (() => {
     return _leads.find((l) => l.id === id) || null;
   }
 
+  function _buildSearchText(lead) {
+    return [
+      lead.name,
+      lead.nicho,
+      lead.subnicho,
+      lead.whatsapp,
+      lead.instagram,
+      lead.canal,
+      lead.ticketRango,
+      lead.stage,
+    ]
+      .filter((v) => v || v === 0)
+      .map((v) => String(v).toLowerCase())
+      .join(" ");
+  }
+
+  function _rebuildSearchIndex() {
+    _searchIndex = new Map();
+    _leads.forEach((lead) => {
+      _searchIndex.set(lead.id, _buildSearchText(lead));
+    });
+  }
+
+  function _syncSearchIndex(lead) {
+    if (!lead || !lead.id) return;
+    _searchIndex.set(lead.id, _buildSearchText(lead));
+  }
+
+  function _removeFromSearchIndex(id) {
+    _searchIndex.delete(id);
+  }
+
   /* ─── API pública ─── */
 
   async function init() {
@@ -123,6 +158,7 @@ const Store = (() => {
       timeline: [{ text: "Lead creado", date: now }],
     };
     _leads.unshift(lead);
+    _syncSearchIndex(lead);
     _persist({ ...lead });
     _notify("create", lead);
     return { ...lead };
@@ -150,6 +186,7 @@ const Store = (() => {
       ];
     }
 
+    _syncSearchIndex(_leads[idx]);
     _persist({ ..._leads[idx] });
     _notify("update", { ..._leads[idx] });
     return { ..._leads[idx] };
@@ -186,10 +223,12 @@ const Store = (() => {
     const existed = _leads.some((l) => l.id === id);
     if (!existed) return false;
     _leads = _leads.filter((l) => l.id !== id);
+    _removeFromSearchIndex(id);
     //eliminar el doc en firestore
     const col = _getCollection();
     if (col)
-      coldoc(id)
+      col
+        .doc(id)
         .delete()
         .catch((e) => console.error("[Store] delete error:", e));
     localStorage.setItem(CRM_CONFIG.STORAGE_KEY, JSON.stringify(_leads));
@@ -208,6 +247,7 @@ const Store = (() => {
     const parsed = JSON.parse(jsonString);
     if (!Array.isArray(parsed)) throw new Error("Formato inválido");
     _leads = parsed;
+    _rebuildSearchIndex();
     _persist();
     _notify("import", { count: parsed.length });
     return parsed.length;
@@ -216,14 +256,23 @@ const Store = (() => {
   /* ─── Queries ─── */
 
   function query({ search = "", stage = "", nicho = "" } = {}) {
-    const s = search.toLowerCase();
+    const s = search.trim().toLowerCase();
+    if (!s && !stage && !nicho) return [..._leads];
+
+    if (!s) {
+      return _leads.filter((l) => {
+        const matchStage = !stage || l.stage === stage;
+        const matchNicho = !nicho || l.nicho === nicho;
+        return matchStage && matchNicho;
+      });
+    }
+
     return _leads.filter((l) => {
-      const matchSearch =
-        !s ||
-        (l.name || "").toLowerCase().includes(s) ||
-        (l.nicho || "").toLowerCase().includes(s) ||
-        (l.whatsapp || "").includes(s) ||
-        (l.instagram || "").toLowerCase().includes(s);
+      const indexedSearch = _searchIndex.get(l.id);
+      const searchable = indexedSearch || _buildSearchText(l);
+      if (!indexedSearch) _searchIndex.set(l.id, searchable);
+
+      const matchSearch = searchable.includes(s);
       const matchStage = !stage || l.stage === stage;
       const matchNicho = !nicho || l.nicho === nicho;
       return matchSearch && matchStage && matchNicho;

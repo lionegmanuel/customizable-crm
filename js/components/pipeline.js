@@ -8,6 +8,8 @@
 const PipelineView = (() => {
   let _onOpenLead = null;
   let _dragId = null;
+  let _search = "";
+  let _searchRenderRaf = null;
 
   /* ─── API pública ─── */
 
@@ -18,21 +20,25 @@ const PipelineView = (() => {
   function render() {
     const el = document.getElementById("view-pipeline");
     if (!el) return;
+    const settings = Store.getSettings();
+    const stages = settings.stages;
+    const followupDays = settings.followupDays;
+    const terminalStages = new Set(
+      stages.filter((stage) => stage.terminal).map((stage) => stage.id),
+    );
 
     const leads = Store.getAll();
-    const active = leads.filter(
-      (l) =>
-        !Store.getSettings().stages.find((s) => s.id === l.stage)?.terminal,
-    );
+    const filteredLeads = _search.trim() ? Store.query({ search: _search }) : leads;
+    const active = leads.filter((l) => !terminalStages.has(l.stage));
     const pipelineVal = active.reduce((a, l) => a + (Number(l.ticket) || 0), 0);
     const alertCount = active.filter(
-      (l) => Utils.daysSince(l.lastActivity) > Store.getSettings().followupDays,
+      (l) => Utils.daysSince(l.lastActivity) > followupDays,
     ).length;
 
     el.innerHTML = [
       _renderMetrics(leads, active, pipelineVal, alertCount),
-      _renderToolbar(),
-      _renderKanban(leads),
+      _renderToolbar(filteredLeads.length),
+      _renderKanban(filteredLeads, stages, followupDays),
     ].join("");
 
     _attachDragHandlers();
@@ -66,10 +72,21 @@ const PipelineView = (() => {
     </div>`;
   }
 
-  function _renderToolbar() {
-    return `<div class="actions-row" style="margin-bottom:12px">
-      <span></span>
-      <div style="display:flex;gap:8px">
+  function _renderToolbar(filteredCount) {
+    const resultsLabel = `${filteredCount} resultado${filteredCount !== 1 ? "s" : ""}`;
+    return `<div class="actions-row pipeline-toolbar">
+      <div class="pipeline-toolbar-main">
+        <div class="search-input-wrap">
+          <input
+            id="pipeline-search"
+            placeholder="Buscar en pipeline (nombre, nicho, teléfono, Instagram...)"
+            value="${Utils.esc(_search)}"
+          />
+          ${_search.trim() ? '<button class="search-clear-btn" id="pipeline-search-clear" type="button" aria-label="Limpiar búsqueda">×</button>' : ""}
+        </div>
+        <span class="text-muted text-sm pipeline-results">${resultsLabel}</span>
+      </div>
+      <div class="pipeline-toolbar-actions">
         <button class="btn btn--sm" id="btn-export">↓ Exportar backup</button>
         <button class="btn btn--sm" id="btn-import">↑ Importar</button>
       </div>
@@ -78,17 +95,29 @@ const PipelineView = (() => {
 
   /* ─── Kanban ─── */
 
-  function _renderKanban(leads) {
-    const cols = Store.getSettings()
-      .stages.map((s) => _renderColumn(s, leads))
+  function _renderKanban(leads, stages, followupDays) {
+    const groupedLeads = _groupLeadsByStage(leads);
+    const cols = stages
+      .map((s) => _renderColumn(s, groupedLeads.get(s.id) || [], followupDays))
       .join("");
     return `<div class="kanban-wrap"><div class="kanban">${cols}</div></div>`;
   }
 
-  function _renderColumn(stage, leads) {
-    const stageLeads = leads.filter((l) => l.stage === stage.id);
+  function _groupLeadsByStage(leads) {
+    const grouped = new Map();
+    leads.forEach((lead) => {
+      const stageId = lead.stage || "";
+      if (!grouped.has(stageId)) grouped.set(stageId, []);
+      grouped.get(stageId).push(lead);
+    });
+    return grouped;
+  }
+
+  function _renderColumn(stage, stageLeads, followupDays) {
     const val = stageLeads.reduce((a, l) => a + (Number(l.ticket) || 0), 0);
-    const cards = stageLeads.map(_renderCard).join("");
+    const cards = stageLeads
+      .map((lead) => _renderCard(lead, followupDays))
+      .join("");
 
     return `<div class="kanban-col"
         data-stage="${stage.id}"
@@ -109,10 +138,10 @@ const PipelineView = (() => {
     </div>`;
   }
 
-  function _renderCard(lead) {
+  function _renderCard(lead, followupDays) {
     const days = Utils.daysSince(lead.lastActivity);
     const daysHtml =
-      days > Store.getSettings().followupDays
+      days > followupDays
         ? `<span class="alert-days">${days}d</span>`
         : `<span style="color:var(--text-tertiary);font-size:10px">${days}d</span>`;
 
@@ -137,10 +166,68 @@ const PipelineView = (() => {
   /* ─── Drag & Drop ─── */
 
   function _attachDragHandlers() {
+    const searchEl = document.getElementById("pipeline-search");
+    const clearSearchEl = document.getElementById("pipeline-search-clear");
     const exportBtn = document.getElementById("btn-export");
     const importBtn = document.getElementById("btn-import");
+
+    if (searchEl)
+      searchEl.addEventListener("input", (e) => {
+        const { selectionStart, selectionEnd, value } = e.target;
+        if (value === _search) return;
+        _search = value;
+        _scheduleSearchRender(selectionStart, selectionEnd);
+      });
+
+    if (searchEl)
+      searchEl.addEventListener("keydown", (e) => {
+        if (e.key !== "Escape" || !_search.trim()) return;
+        e.preventDefault();
+        e.stopPropagation();
+        _clearSearch();
+      });
+
+    if (clearSearchEl)
+      clearSearchEl.addEventListener("click", () => {
+        _clearSearch();
+      });
+
     if (exportBtn) exportBtn.addEventListener("click", _handleExport);
     if (importBtn) importBtn.addEventListener("click", _handleImport);
+  }
+
+  function _scheduleSearchRender(selectionStart, selectionEnd) {
+    if (_searchRenderRaf) cancelAnimationFrame(_searchRenderRaf);
+    _searchRenderRaf = requestAnimationFrame(() => {
+      _searchRenderRaf = null;
+      render();
+      _restoreSearchCursor(selectionStart, selectionEnd);
+    });
+  }
+
+  function _clearSearch() {
+    if (!_search.trim()) return;
+    if (_searchRenderRaf) {
+      cancelAnimationFrame(_searchRenderRaf);
+      _searchRenderRaf = null;
+    }
+    _search = "";
+    render();
+    const searchEl = document.getElementById("pipeline-search");
+    if (searchEl) searchEl.focus();
+  }
+
+  function _restoreSearchCursor(selectionStart, selectionEnd) {
+    const searchEl = document.getElementById("pipeline-search");
+    if (!searchEl) return;
+    searchEl.focus();
+
+    if (
+      typeof selectionStart === "number" &&
+      typeof selectionEnd === "number"
+    ) {
+      searchEl.setSelectionRange(selectionStart, selectionEnd);
+    }
   }
 
   function _onDragStart(e, id) {

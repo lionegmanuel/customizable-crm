@@ -14,11 +14,19 @@ const MetricsView = (() => {
     if (!el) return;
 
     const leads = Store.getAll();
-    const stats = _calcStats(leads);
-    const byStage = _groupByStage(leads);
+    const settings = Store.getSettings();
+    const terminalStages = new Set(
+      settings.stages
+        .filter((stage) => stage.terminal)
+        .map((stage) => stage.id),
+    );
+    const followupDays = settings.followupDays;
+
+    const stats = _calcStats(leads, terminalStages, followupDays);
+    const byStage = _groupByStage(leads, settings.stages);
     const byNicho = _groupByField(leads, "nicho");
     const byCanal = _groupByField(leads, "canal");
-    const alertList = _getAlertLeads(leads);
+    const alertList = _getAlertLeads(leads, terminalStages, followupDays);
 
     el.innerHTML = [
       _renderSummary(stats),
@@ -31,26 +39,28 @@ const MetricsView = (() => {
 
   /* ─── Cálculos ─── */
 
-  function _calcStats(leads) {
+  function _calcStats(leads, terminalStages, followupDays) {
     const cerrados = leads.filter((l) => l.stage === "cerrado");
-    const active = leads.filter(
-      (l) =>
-        !Store.getSettings().stages.find((s) => s.id === l.stage)?.terminal,
-    );
+    const active = leads.filter((l) => !terminalStages.has(l.stage));
     const tasa =
       leads.length > 0 ? Math.round((cerrados.length / leads.length) * 100) : 0;
     const valorCerr = cerrados.reduce((a, l) => a + (Number(l.ticket) || 0), 0);
     const valorPipe = active.reduce((a, l) => a + (Number(l.ticket) || 0), 0);
     const alertCount = active.filter(
-      (l) => Utils.daysSince(l.lastActivity) > Store.getSettings().followupDays,
+      (l) => Utils.daysSince(l.lastActivity) > followupDays,
     ).length;
     return { total: leads.length, tasa, valorCerr, valorPipe, alertCount };
   }
 
-  function _groupByStage(leads) {
-    return Store.getSettings().stages.map((s) => ({
+  function _groupByStage(leads, stages) {
+    const counts = new Map();
+    leads.forEach((lead) => {
+      counts.set(lead.stage, (counts.get(lead.stage) || 0) + 1);
+    });
+
+    return stages.map((s) => ({
       ...s,
-      count: leads.filter((l) => l.stage === s.id).length,
+      count: counts.get(s.id) || 0,
     }));
   }
 
@@ -62,12 +72,12 @@ const MetricsView = (() => {
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }
 
-  function _getAlertLeads(leads) {
+  function _getAlertLeads(leads, terminalStages, followupDays) {
     return leads
       .filter(
         (l) =>
-          !Store.getSettings().stages.find((s) => s.id === l.stage)?.terminal &&
-          Utils.daysSince(l.lastActivity) > Store.getSettings().followupDays,
+          !terminalStages.has(l.stage) &&
+          Utils.daysSince(l.lastActivity) > followupDays,
       )
       .sort(
         (a, b) =>

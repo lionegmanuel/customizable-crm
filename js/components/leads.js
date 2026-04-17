@@ -7,6 +7,7 @@ const LeadsView = (() => {
   let _search = "";
   let _filterStage = "";
   let _filterNicho = "";
+  let _searchRenderRaf = null;
 
   /* ─── API pública ─── */
 
@@ -17,6 +18,7 @@ const LeadsView = (() => {
   function render() {
     const el = document.getElementById("view-leads");
     if (!el) return;
+    const settings = Store.getSettings();
 
     const filtered = Store.query({
       search: _search,
@@ -25,9 +27,9 @@ const LeadsView = (() => {
     });
 
     el.innerHTML = [
-      _renderFilters(),
+      _renderFilters(settings),
       _renderToolbar(filtered.length),
-      _renderTable(filtered),
+      _renderTable(filtered, settings.followupDays),
     ].join("");
 
     _attachHandlers();
@@ -35,27 +37,30 @@ const LeadsView = (() => {
 
   /* ─── Filtros ─── */
 
-  function _renderFilters() {
-    const stageOpts = Store.getSettings()
-      .stages.map(
+  function _renderFilters(settings) {
+    const stageOpts = settings.stages
+      .map(
         (s) =>
           `<option value="${s.id}" ${_filterStage === s.id ? "selected" : ""}>${Utils.esc(s.label)}</option>`,
       )
       .join("");
 
-    const nichoOpts = Store.getSettings()
-      .nichos.map(
+    const nichoOpts = settings.nichos
+      .map(
         (n) =>
           `<option value="${n}" ${_filterNicho === n ? "selected" : ""}>${Utils.esc(n)}</option>`,
       )
       .join("");
 
     return `<div class="search-row">
-      <input
-        id="leads-search"
-        placeholder="Buscar nombre, nicho, teléfono, Instagram..."
-        value="${Utils.esc(_search)}"
-      />
+      <div class="search-input-wrap">
+        <input
+          id="leads-search"
+          placeholder="Buscar nombre, nicho, teléfono, Instagram..."
+          value="${Utils.esc(_search)}"
+        />
+        ${_search.trim() ? '<button class="search-clear-btn" id="leads-search-clear" type="button" aria-label="Limpiar búsqueda">×</button>' : ""}
+      </div>
       <select id="leads-filter-stage">
         <option value="">Todas las etapas</option>
         ${stageOpts}
@@ -79,10 +84,10 @@ const LeadsView = (() => {
 
   /* ─── Tabla ─── */
 
-  function _renderTable(leads) {
+  function _renderTable(leads, followupDays) {
     const rows = leads.length
-      ? leads.map(_renderRow).join("")
-      : `<tr><td colspan="8">
+      ? leads.map((lead) => _renderRow(lead, followupDays)).join("")
+      : `<tr><td colspan="9">
           <div class="empty">
             <strong>Sin resultados</strong>
             Probá ajustar los filtros de búsqueda.
@@ -109,11 +114,11 @@ const LeadsView = (() => {
     </div>`;
   }
 
-  function _renderRow(lead) {
+  function _renderRow(lead, followupDays) {
     const days = Utils.daysSince(lead.lastActivity);
     const waBtn = lead.whatsapp
       ? `<a class="btn btn--sm btn--wa"
-            href="https://wa.me/${(lead.whatsapp || "").replace(/\D/g, "")}"
+            href="https://wa.me/${(lead.whatsapp || "").replace(/\D/g, "")}" 
             target="_blank"
             rel="noopener"
             onclick="event.stopPropagation()">WA</a>`
@@ -143,7 +148,7 @@ const LeadsView = (() => {
       <td style="color:var(--green);font-weight:500">${lead.ticket ? Utils.fmtCurrency(lead.ticket) : "—"}</td>
       <td>${tempHtml}</td>
       <td>${prioHtml}</td>
-      <td style="color:${days > Store.getSettings().followupDays ? "var(--amber)" : "var(--text-tertiary)"};font-size:12px">${days}d</td>
+      <td style="color:${days > followupDays ? "var(--amber)" : "var(--text-tertiary)"};font-size:12px">${days}d</td>
     </tr>`;
   }
 
@@ -151,6 +156,7 @@ const LeadsView = (() => {
 
   function _attachHandlers() {
     const searchEl = document.getElementById("leads-search");
+    const clearSearchEl = document.getElementById("leads-search-clear");
     const stageEl = document.getElementById("leads-filter-stage");
     const nichoEl = document.getElementById("leads-filter-nicho");
     const exportEl = document.getElementById("btn-export-leads");
@@ -158,18 +164,35 @@ const LeadsView = (() => {
 
     if (searchEl)
       searchEl.addEventListener("input", (e) => {
-        _search = e.target.value;
-        render();
+        const { selectionStart, selectionEnd, value } = e.target;
+        if (value === _search) return;
+        _search = value;
+        _scheduleSearchRender(selectionStart, selectionEnd);
+      });
+
+    if (searchEl)
+      searchEl.addEventListener("keydown", (e) => {
+        if (e.key !== "Escape" || !_search.trim()) return;
+        e.preventDefault();
+        e.stopPropagation();
+        _clearSearch();
+      });
+
+    if (clearSearchEl)
+      clearSearchEl.addEventListener("click", () => {
+        _clearSearch();
       });
 
     if (stageEl)
       stageEl.addEventListener("change", (e) => {
+        if (e.target.value === _filterStage) return;
         _filterStage = e.target.value;
         render();
       });
 
     if (nichoEl)
       nichoEl.addEventListener("change", (e) => {
+        if (e.target.value === _filterNicho) return;
         _filterNicho = e.target.value;
         render();
       });
@@ -198,6 +221,40 @@ const LeadsView = (() => {
           );
         });
       });
+  }
+
+  function _scheduleSearchRender(selectionStart, selectionEnd) {
+    if (_searchRenderRaf) cancelAnimationFrame(_searchRenderRaf);
+    _searchRenderRaf = requestAnimationFrame(() => {
+      _searchRenderRaf = null;
+      render();
+      _restoreSearchCursor(selectionStart, selectionEnd);
+    });
+  }
+
+  function _clearSearch() {
+    if (!_search.trim()) return;
+    if (_searchRenderRaf) {
+      cancelAnimationFrame(_searchRenderRaf);
+      _searchRenderRaf = null;
+    }
+    _search = "";
+    render();
+    const searchEl = document.getElementById("leads-search");
+    if (searchEl) searchEl.focus();
+  }
+
+  function _restoreSearchCursor(selectionStart, selectionEnd) {
+    const searchEl = document.getElementById("leads-search");
+    if (!searchEl) return;
+    searchEl.focus();
+
+    if (
+      typeof selectionStart === "number" &&
+      typeof selectionEnd === "number"
+    ) {
+      searchEl.setSelectionRange(selectionStart, selectionEnd);
+    }
   }
 
   function _onRowClick(id) {
