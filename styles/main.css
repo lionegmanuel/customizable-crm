@@ -138,10 +138,22 @@ textarea {
   gap: var(--sp-2);
 }
 
+#app-shell {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .content {
   padding: 18px var(--sp-5);
+  width: 100%;
   max-width: 1600px;
   margin: 0 auto;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .view {

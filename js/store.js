@@ -318,7 +318,19 @@ const Store = (() => {
         merged[key] = defaults[key];
       }
     });
-    merged.stages = (merged.stages || defaults.stages).map(s => ({ ...s }));
+
+    const normalizedStages = (merged.stages || defaults.stages)
+      .map((stage, index) => {
+        const parsedOrder = Number(stage.order);
+        return {
+          ...stage,
+          order: Number.isFinite(parsedOrder) ? parsedOrder : index,
+        };
+      })
+      .sort((a, b) => a.order - b.order)
+      .map((stage, index) => ({ ...stage, order: index }));
+
+    merged.stages = normalizedStages;
     return merged;
   }
 
