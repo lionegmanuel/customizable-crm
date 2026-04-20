@@ -9,7 +9,44 @@ const PipelineView = (() => {
   let _onOpenLead = null;
   let _dragId = null;
   let _search = "";
+  let _filters = _defaultFilters();
+  let _showAdvanced = false;
   let _searchRenderRaf = null;
+
+  function _defaultFilters() {
+    return {
+      stage: "",
+      nicho: "",
+      subnicho: "",
+      canal: "",
+      ticketRango: "",
+      temperatura: "",
+      prioridad: "",
+      city: "",
+      province: "",
+      country: "",
+      targetCategory: "",
+      subCategory: "",
+      businessProfile: "",
+      companySize: "",
+      leadSource: "",
+      decisionMakerRole: "",
+      alignmentStatus: "",
+      hasEmail: "",
+      hasWhatsapp: "",
+      hasPhone: "",
+      hasWebsite: "",
+      hasLinkedin: "",
+      hasDecisionMaker: "",
+      scoreMin: "",
+      scoreMax: "",
+      potentialMin: "",
+      difficultyMax: "",
+      followersMin: "",
+      inactiveDaysMin: "",
+      inactiveDaysMax: "",
+    };
+  }
 
   /* ─── API pública ─── */
 
@@ -20,6 +57,7 @@ const PipelineView = (() => {
   function render() {
     const el = document.getElementById("view-pipeline");
     if (!el) return;
+
     const settings = Store.getSettings();
     const stages = settings.stages;
     const followupDays = settings.followupDays;
@@ -28,16 +66,23 @@ const PipelineView = (() => {
     );
 
     const leads = Store.getAll();
-    const filteredLeads = _search.trim() ? Store.query({ search: _search }) : leads;
+    const options = Utils.collectLeadFilterOptions(leads, settings);
+    const searchMatched = _search.trim() ? Store.query({ search: _search }) : leads;
+    const filteredLeads = searchMatched.filter((lead) =>
+      Utils.matchesLeadFilters(lead, _filters),
+    );
+
     const active = leads.filter((l) => !terminalStages.has(l.stage));
     const pipelineVal = active.reduce((a, l) => a + (Number(l.ticket) || 0), 0);
     const alertCount = active.filter(
       (l) => Utils.daysSince(l.lastActivity) > followupDays,
     ).length;
 
+    const activeFilters = Object.values(_filters).filter((value) => Utils.hasValue(value)).length;
+
     el.innerHTML = [
       _renderMetrics(leads, active, pipelineVal, alertCount),
-      _renderToolbar(filteredLeads.length),
+      _renderToolbar(filteredLeads.length, options, activeFilters),
       _renderKanban(filteredLeads, stages, followupDays),
     ].join("");
 
@@ -72,14 +117,65 @@ const PipelineView = (() => {
     </div>`;
   }
 
-  function _renderToolbar(filteredCount) {
+  function _renderOptionTags(items, selected) {
+    return (items || [])
+      .map(
+        (item) =>
+          `<option value="${Utils.esc(item)}" ${selected === item ? "selected" : ""}>${Utils.esc(item)}</option>`,
+      )
+      .join("");
+  }
+
+  function _renderPresenceOptions(selected) {
+    return [
+      `<option value="" ${selected === "" ? "selected" : ""}>Todos</option>`,
+      `<option value="yes" ${selected === "yes" ? "selected" : ""}>Con dato</option>`,
+      `<option value="no" ${selected === "no" ? "selected" : ""}>Sin dato</option>`,
+    ].join("");
+  }
+
+  function _renderToolbar(filteredCount, options, activeFilters) {
     const resultsLabel = `${filteredCount} resultado${filteredCount !== 1 ? "s" : ""}`;
+    const stageOpts = (options.stages || [])
+      .map(
+        (stage) =>
+          `<option value="${stage.id}" ${_filters.stage === stage.id ? "selected" : ""}>${Utils.esc(stage.label)}</option>`,
+      )
+      .join("");
+
+    const quickNichoOpts = _renderOptionTags(options.nichos, _filters.nicho);
+    const priorityOpts = _renderOptionTags(options.prioridades, _filters.prioridad);
+    const subnichoOpts = _renderOptionTags(options.subnichos, _filters.subnicho);
+    const canalOpts = _renderOptionTags(options.canales, _filters.canal);
+    const tempOpts = _renderOptionTags(options.temperaturas, _filters.temperatura);
+    const ticketOpts = _renderOptionTags(options.ticketRangos, _filters.ticketRango);
+    const cityOpts = _renderOptionTags(options.city, _filters.city);
+    const provinceOpts = _renderOptionTags(options.province, _filters.province);
+    const countryOpts = _renderOptionTags(options.country, _filters.country);
+    const targetCategoryOpts = _renderOptionTags(
+      options.targetCategory,
+      _filters.targetCategory,
+    );
+    const subCategoryOpts = _renderOptionTags(options.subCategory, _filters.subCategory);
+    const profileOpts = _renderOptionTags(options.businessProfile, _filters.businessProfile);
+    const companySizeOpts = _renderOptionTags(options.companySize, _filters.companySize);
+    const sourceOpts = _renderOptionTags(options.leadSource, _filters.leadSource);
+    const roleOpts = _renderOptionTags(options.decisionMakerRole, _filters.decisionMakerRole);
+    const alignmentOpts = _renderOptionTags(
+      options.alignmentStatus,
+      _filters.alignmentStatus,
+    );
+
+    const advancedLabel = _showAdvanced
+      ? `Ocultar filtros PRO (${activeFilters})`
+      : `Filtros PRO (${activeFilters})`;
+
     return `<div class="actions-row pipeline-toolbar">
       <div class="pipeline-toolbar-main">
         <div class="search-input-wrap">
           <input
             id="pipeline-search"
-            placeholder="Buscar en pipeline (nombre, nicho, teléfono, Instagram...)"
+            placeholder="Buscar por nombre, correo, teléfono, ciudad, web, decisor..."
             value="${Utils.esc(_search)}"
           />
           ${_search.trim() ? '<button class="search-clear-btn" id="pipeline-search-clear" type="button" aria-label="Limpiar búsqueda">×</button>' : ""}
@@ -89,6 +185,143 @@ const PipelineView = (() => {
       <div class="pipeline-toolbar-actions">
         <button class="btn btn--sm" id="btn-export">↓ Exportar backup</button>
         <button class="btn btn--sm" id="btn-import">↑ Importar</button>
+      </div>
+    </div>
+
+    <div class="filters-card pipeline-filters-card">
+      <div class="search-row search-row--tight">
+        <select data-pipeline-filter="stage" id="pipeline-filter-stage">
+          <option value="">Todas las etapas</option>
+          ${stageOpts}
+        </select>
+        <select data-pipeline-filter="nicho" id="pipeline-filter-nicho">
+          <option value="">Todos los nichos</option>
+          ${quickNichoOpts}
+        </select>
+        <select data-pipeline-filter="prioridad" id="pipeline-filter-prioridad">
+          <option value="">Todas las prioridades</option>
+          ${priorityOpts}
+        </select>
+        <button class="btn btn--sm" id="pipeline-toggle-advanced" type="button">${advancedLabel}</button>
+        <button class="btn btn--sm" id="pipeline-clear-filters" type="button" ${activeFilters ? "" : "disabled"}>Limpiar filtros</button>
+      </div>
+
+      <div class="filters-advanced ${_showAdvanced ? "filters-advanced--open" : ""}" id="pipeline-advanced-wrap">
+        <div class="filters-grid">
+          <div class="filter-field">
+            <label>Sub-nicho</label>
+            <select data-pipeline-filter="subnicho"><option value="">Todos</option>${subnichoOpts}</select>
+          </div>
+          <div class="filter-field">
+            <label>Canal de contacto</label>
+            <select data-pipeline-filter="canal"><option value="">Todos</option>${canalOpts}</select>
+          </div>
+          <div class="filter-field">
+            <label>Temperatura</label>
+            <select data-pipeline-filter="temperatura"><option value="">Todas</option>${tempOpts}</select>
+          </div>
+          <div class="filter-field">
+            <label>Ticket</label>
+            <select data-pipeline-filter="ticketRango"><option value="">Todos</option>${ticketOpts}</select>
+          </div>
+
+          <div class="filter-field">
+            <label>Ciudad</label>
+            <select data-pipeline-filter="city"><option value="">Todas</option>${cityOpts}</select>
+          </div>
+          <div class="filter-field">
+            <label>Provincia</label>
+            <select data-pipeline-filter="province"><option value="">Todas</option>${provinceOpts}</select>
+          </div>
+          <div class="filter-field">
+            <label>País</label>
+            <select data-pipeline-filter="country"><option value="">Todos</option>${countryOpts}</select>
+          </div>
+          <div class="filter-field">
+            <label>Fuente del lead</label>
+            <select data-pipeline-filter="leadSource"><option value="">Todas</option>${sourceOpts}</select>
+          </div>
+
+          <div class="filter-field">
+            <label>Categoría objetivo</label>
+            <select data-pipeline-filter="targetCategory"><option value="">Todas</option>${targetCategoryOpts}</select>
+          </div>
+          <div class="filter-field">
+            <label>Subcategoría</label>
+            <select data-pipeline-filter="subCategory"><option value="">Todas</option>${subCategoryOpts}</select>
+          </div>
+          <div class="filter-field">
+            <label>Perfil comercial</label>
+            <select data-pipeline-filter="businessProfile"><option value="">Todos</option>${profileOpts}</select>
+          </div>
+          <div class="filter-field">
+            <label>Tamaño de empresa</label>
+            <select data-pipeline-filter="companySize"><option value="">Todos</option>${companySizeOpts}</select>
+          </div>
+
+          <div class="filter-field">
+            <label>Rol del decisor</label>
+            <select data-pipeline-filter="decisionMakerRole"><option value="">Todos</option>${roleOpts}</select>
+          </div>
+          <div class="filter-field">
+            <label>Estado de alineación</label>
+            <select data-pipeline-filter="alignmentStatus"><option value="">Todos</option>${alignmentOpts}</select>
+          </div>
+          <div class="filter-field">
+            <label>Correo</label>
+            <select data-pipeline-filter="hasEmail">${_renderPresenceOptions(_filters.hasEmail)}</select>
+          </div>
+          <div class="filter-field">
+            <label>WhatsApp</label>
+            <select data-pipeline-filter="hasWhatsapp">${_renderPresenceOptions(_filters.hasWhatsapp)}</select>
+          </div>
+
+          <div class="filter-field">
+            <label>Teléfono</label>
+            <select data-pipeline-filter="hasPhone">${_renderPresenceOptions(_filters.hasPhone)}</select>
+          </div>
+          <div class="filter-field">
+            <label>Sitio web</label>
+            <select data-pipeline-filter="hasWebsite">${_renderPresenceOptions(_filters.hasWebsite)}</select>
+          </div>
+          <div class="filter-field">
+            <label>LinkedIn</label>
+            <select data-pipeline-filter="hasLinkedin">${_renderPresenceOptions(_filters.hasLinkedin)}</select>
+          </div>
+          <div class="filter-field">
+            <label>Datos de decisor</label>
+            <select data-pipeline-filter="hasDecisionMaker">${_renderPresenceOptions(_filters.hasDecisionMaker)}</select>
+          </div>
+
+          <div class="filter-field">
+            <label>Score comercial mínimo</label>
+            <input data-pipeline-filter="scoreMin" type="number" step="0.1" value="${Utils.esc(_filters.scoreMin)}" placeholder="70" />
+          </div>
+          <div class="filter-field">
+            <label>Score comercial máximo</label>
+            <input data-pipeline-filter="scoreMax" type="number" step="0.1" value="${Utils.esc(_filters.scoreMax)}" placeholder="100" />
+          </div>
+          <div class="filter-field">
+            <label>Potencial mínimo (1-5)</label>
+            <input data-pipeline-filter="potentialMin" type="number" min="1" max="5" step="1" value="${Utils.esc(_filters.potentialMin)}" placeholder="3" />
+          </div>
+          <div class="filter-field">
+            <label>Dificultad máxima (1-5)</label>
+            <input data-pipeline-filter="difficultyMax" type="number" min="1" max="5" step="1" value="${Utils.esc(_filters.difficultyMax)}" placeholder="3" />
+          </div>
+          <div class="filter-field">
+            <label>Seguidores mínimos</label>
+            <input data-pipeline-filter="followersMin" type="number" min="0" step="1" value="${Utils.esc(_filters.followersMin)}" placeholder="10000" />
+          </div>
+          <div class="filter-field">
+            <label>Días sin actividad mín.</label>
+            <input data-pipeline-filter="inactiveDaysMin" type="number" min="0" step="1" value="${Utils.esc(_filters.inactiveDaysMin)}" placeholder="3" />
+          </div>
+          <div class="filter-field">
+            <label>Días sin actividad máx.</label>
+            <input data-pipeline-filter="inactiveDaysMax" type="number" min="0" step="1" value="${Utils.esc(_filters.inactiveDaysMax)}" placeholder="30" />
+          </div>
+        </div>
       </div>
     </div>`;
   }
@@ -168,6 +401,8 @@ const PipelineView = (() => {
   function _attachDragHandlers() {
     const searchEl = document.getElementById("pipeline-search");
     const clearSearchEl = document.getElementById("pipeline-search-clear");
+    const toggleAdvancedEl = document.getElementById("pipeline-toggle-advanced");
+    const clearFiltersEl = document.getElementById("pipeline-clear-filters");
     const exportBtn = document.getElementById("btn-export");
     const importBtn = document.getElementById("btn-import");
 
@@ -176,7 +411,7 @@ const PipelineView = (() => {
         const { selectionStart, selectionEnd, value } = e.target;
         if (value === _search) return;
         _search = value;
-        _scheduleSearchRender(selectionStart, selectionEnd);
+        _queueRender(() => _restoreSearchCursor(selectionStart, selectionEnd));
       });
 
     if (searchEl)
@@ -192,16 +427,42 @@ const PipelineView = (() => {
         _clearSearch();
       });
 
+    if (toggleAdvancedEl)
+      toggleAdvancedEl.addEventListener("click", () => {
+        _showAdvanced = !_showAdvanced;
+        render();
+      });
+
+    if (clearFiltersEl)
+      clearFiltersEl.addEventListener("click", () => {
+        _filters = _defaultFilters();
+        render();
+      });
+
+    document.querySelectorAll("[data-pipeline-filter]").forEach((field) => {
+      const eventName = field.tagName === "SELECT" ? "change" : "input";
+      field.addEventListener(eventName, (e) => {
+        const key = e.currentTarget.dataset.pipelineFilter;
+        if (!key || !(key in _filters)) return;
+
+        const value = e.currentTarget.value || "";
+        if (_filters[key] === value) return;
+
+        _filters = { ..._filters, [key]: value };
+        _queueRender();
+      });
+    });
+
     if (exportBtn) exportBtn.addEventListener("click", _handleExport);
     if (importBtn) importBtn.addEventListener("click", _handleImport);
   }
 
-  function _scheduleSearchRender(selectionStart, selectionEnd) {
+  function _queueRender(postRender = null) {
     if (_searchRenderRaf) cancelAnimationFrame(_searchRenderRaf);
     _searchRenderRaf = requestAnimationFrame(() => {
       _searchRenderRaf = null;
       render();
-      _restoreSearchCursor(selectionStart, selectionEnd);
+      if (typeof postRender === "function") postRender();
     });
   }
 
@@ -212,9 +473,10 @@ const PipelineView = (() => {
       _searchRenderRaf = null;
     }
     _search = "";
-    render();
-    const searchEl = document.getElementById("pipeline-search");
-    if (searchEl) searchEl.focus();
+    _queueRender(() => {
+      const searchEl = document.getElementById("pipeline-search");
+      if (searchEl) searchEl.focus();
+    });
   }
 
   function _restoreSearchCursor(selectionStart, selectionEnd) {

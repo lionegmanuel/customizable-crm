@@ -46,7 +46,7 @@ const AuthService = (() => {
 
   function _hideAuthScreen() {
     document.getElementById("auth-screen").style.display = "none";
-    document.getElementById("app-shell").style.display = "block";
+    document.getElementById("app-shell").style.display = "flex";
   }
 
   function _renderAuthScreen() {
