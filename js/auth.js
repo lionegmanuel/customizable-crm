@@ -262,6 +262,8 @@ const AuthService = (() => {
       "auth/too-many-requests": "Demasiados intentos. Esperá unos minutos.",
       "auth/invalid-credential":
         "Credenciales inválidas. Verificá email y contraseña.",
+      "auth/invalid-login-credentials":
+        "Credenciales inválidas. Verificá email y contraseña.",
     };
     return map[code] || "Ocurrió un error. Intentá de nuevo.";
   }

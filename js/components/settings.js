@@ -120,8 +120,13 @@ const SettingsView = (() => {
     const rows = items
       .map(
         (val, i) => `
-      <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center" data-list-idx="${i}">
-        <input class="list-item-input" value="${Utils.esc(val)}" data-idx="${i}" style="flex:1"/>
+      <div style="display:grid;grid-template-columns:1fr 80px 86px 36px;gap:8px;align-items:center;margin-bottom:8px" data-list-idx="${i}">
+        <input class="list-item-input" value="${Utils.esc(val)}" data-idx="${i}" placeholder="Valor"/>
+        <input class="list-order-input" type="number" min="1" step="1" value="${i + 1}" data-idx="${i}"/>
+        <div style="display:flex;gap:4px;justify-content:center">
+          <button class="btn btn--sm list-move-up" data-idx="${i}" ${i === 0 ? "disabled" : ""} aria-label="Mover arriba">↑</button>
+          <button class="btn btn--sm list-move-down" data-idx="${i}" ${i === items.length - 1 ? "disabled" : ""} aria-label="Mover abajo">↓</button>
+        </div>
         <button class="btn btn--sm btn--danger list-delete" data-idx="${i}" ${items.length <= 1 ? "disabled" : ""}>✕</button>
       </div>`,
       )
@@ -130,10 +135,30 @@ const SettingsView = (() => {
     return `
       <div class="panel-card" style="padding:16px">
         <div style="font-size:13px;font-weight:500;margin-bottom:12px">${labels[field] || field}</div>
-        <div id="list-items">${rows}</div>
+        <div style="overflow-x:auto">
+          <div style="min-width:420px">
+            <div style="font-size:11px;color:var(--text-secondary);display:grid;grid-template-columns:1fr 80px 86px 36px;gap:8px;margin-bottom:8px;padding:0 0 8px;border-bottom:1px solid var(--border)">
+              <span>Valor</span><span>Orden</span><span>Mover</span><span></span>
+            </div>
+            <div id="list-items">${rows}</div>
+          </div>
+        </div>
         <button class="btn btn--sm" id="list-add" style="margin-top:12px">+ Agregar opción</button>
       </div>
       <button class="btn btn--primary" id="settings-save-list" style="margin-top:12px" data-field="${field}">Guardar</button>`;
+  }
+
+  function _moveListItem(field, fromIdx, toIdx) {
+    const s = Store.getSettings();
+    const items = Array.isArray(s[field]) ? [...s[field]] : [];
+
+    if (!Number.isInteger(fromIdx) || !Number.isInteger(toIdx)) return;
+    if (toIdx < 0 || toIdx >= items.length) return;
+
+    const [moved] = items.splice(fromIdx, 1);
+    items.splice(toIdx, 0, moved);
+    Store.saveSettings({ [field]: items });
+    render();
   }
 
   /* ─── Handlers ─── */
@@ -255,15 +280,58 @@ const SettingsView = (() => {
       });
     });
 
+    document.querySelectorAll(".list-move-up").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const idx = Number(e.currentTarget.dataset.idx);
+        const field =
+          document.getElementById("settings-save-list")?.dataset.field;
+        if (!field) return;
+        _moveListItem(field, idx, idx - 1);
+      });
+    });
+
+    document.querySelectorAll(".list-move-down").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const idx = Number(e.currentTarget.dataset.idx);
+        const field =
+          document.getElementById("settings-save-list")?.dataset.field;
+        if (!field) return;
+        _moveListItem(field, idx, idx + 1);
+      });
+    });
+
     document
       .getElementById("settings-save-list")
       ?.addEventListener("click", (e) => {
         const field = e.currentTarget.dataset.field;
         const s = Store.getSettings();
         const items = document.querySelectorAll(".list-item-input");
+        const orderInputs = document.querySelectorAll(".list-order-input");
+
         s[field] = Array.from(items)
-          .map((el) => el.value.trim())
-          .filter(Boolean);
+          .map((el, index) => {
+            const orderValue = Number(orderInputs[index]?.value);
+            return {
+              value: el.value.trim(),
+              manualOrder: Number.isFinite(orderValue)
+                ? Math.max(1, Math.floor(orderValue))
+                : index + 1,
+              originalIndex: index,
+            };
+          })
+          .filter((item) => Boolean(item.value))
+          .sort(
+            (a, b) =>
+              a.manualOrder - b.manualOrder ||
+              a.originalIndex - b.originalIndex,
+          )
+          .map((item) => item.value);
+
+        if (!s[field].length) {
+          App.showToast("La lista debe tener al menos una opción", "danger");
+          return;
+        }
+
         Store.saveSettings({ [field]: s[field] });
         App.showToast("Lista guardada", "success");
         render();
