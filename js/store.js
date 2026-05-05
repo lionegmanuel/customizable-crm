@@ -12,6 +12,22 @@ const Store = (() => {
   let _subscribers = [];
   let _searchIndex = new Map();
 
+  function _saveToLocal() {
+    try {
+      localStorage.setItem(CRM_CONFIG.STORAGE_KEY, JSON.stringify(_leads));
+    } catch (e) {
+      console.warn("[Store] LocalStorage quota exceeded. Data only in memory/Firestore.");
+    }
+  }
+
+  function _saveSettingsToLocal() {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(_settings));
+    } catch (e) {
+      console.warn("[Store] LocalStorage quota exceeded for settings.");
+    }
+  }
+
   /* ─── Persistencia ─── */
 
   function _getCollection() {
@@ -57,10 +73,10 @@ const Store = (() => {
         });
         await batch.commit();
       }
-      localStorage.setItem(CRM_CONFIG.STORAGE_KEY, JSON.stringify(_leads));
+      _saveToLocal();
     } catch (e) {
       console.error("[Store] Error Firestore:", e);
-      localStorage.setItem(CRM_CONFIG.STORAGE_KEY, JSON.stringify(_leads));
+      _saveToLocal();
     }
   }
 
@@ -290,7 +306,7 @@ const Store = (() => {
         .doc(id)
         .delete()
         .catch((e) => console.error("[Store] delete error:", e));
-    localStorage.setItem(CRM_CONFIG.STORAGE_KEY, JSON.stringify(_leads));
+    _saveToLocal();
     _persist();
     _notify("remove", { id });
     return true;
@@ -396,7 +412,7 @@ const Store = (() => {
   function saveSettings(newSettings) {
     const defaults = _defaultSettings();
     _settings = { ...defaults, ..._settings, ...newSettings };
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(_settings));
+    _saveSettingsToLocal();
     const user = AuthService.currentUser();
     if (user) {
       DB.collection("users")
@@ -411,7 +427,7 @@ const Store = (() => {
 
   function resetSettings() {
     _settings = _defaultSettings();
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(_settings));
+    _saveSettingsToLocal();
     _notify("settings", null);
   }
   return {
