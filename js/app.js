@@ -91,7 +91,7 @@ const App = (() => {
     MetricsView.init(callbacks);
     Panel.init({
       onClose: () => {
-        if (_viewNeedsRender[_currentView]) _queueRender();
+        _queueRender(true);
       },
     });
     SettingsView.init();
@@ -129,11 +129,11 @@ const App = (() => {
   function _subscribeToStore() {
     if (_unsubscribeStore) _unsubscribeStore();
 
-    _unsubscribeStore = Store.subscribe(() => {
+    _unsubscribeStore = Store.subscribe((event, payload) => {
       // Cualquier cambio en el store re-renderiza la vista actual.
       // En SaaS con múltiples pestañas, aquí iría un WebSocket listener.
       _markAllViewsDirty();
-      if (Panel.isOpen()) return;
+      if (Panel.isOpen() && event !== "remove") return;
       _queueRender();
     });
   }

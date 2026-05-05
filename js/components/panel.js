@@ -790,9 +790,9 @@ const Panel = (() => {
   function _attachHandlers(lead, isNew, isRead) {
     const get = (id) => document.getElementById(id);
 
-    get("panel-overlay")?.addEventListener("click", (e) => {
-      if (e.target === get("panel-overlay")) close();
-    });
+    // get("panel-overlay")?.addEventListener("click", (e) => {
+    //   if (e.target === get("panel-overlay")) close();
+    // });
 
     get("panel-close")?.addEventListener("click", close);
 
