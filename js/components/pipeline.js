@@ -383,6 +383,7 @@ const PipelineView = (() => {
         data-id="${lead.id}"
         ondragstart="PipelineView._onDragStart(event,'${lead.id}')"
         ondragend="PipelineView._onDragEnd(event)"
+        oncontextmenu="PipelineView._onContextMenu(event, '${lead.id}')"
         onclick="PipelineView._onCardClick('${lead.id}')">
       <div class="lead-card-name">${Utils.esc(lead.name || "Sin nombre")}</div>
       <div class="lead-card-nicho">${Utils.esc(lead.nicho || "—")}</div>
@@ -398,6 +399,23 @@ const PipelineView = (() => {
 
   /* ─── Drag & Drop ─── */
 
+  let _scrollInterval = null;
+
+  function _autoScroll(e) {
+    const wrap = document.querySelector('.kanban-wrap');
+    if (!wrap) return;
+
+    const threshold = 100; // px
+    const speed = 15; // px
+    const rect = wrap.getBoundingClientRect();
+    
+    if (e.clientX < rect.left + threshold) {
+      wrap.scrollLeft -= speed;
+    } else if (e.clientX > rect.right - threshold) {
+      wrap.scrollLeft += speed;
+    }
+  }
+
   function _attachDragHandlers() {
     const searchEl = document.getElementById("pipeline-search");
     const clearSearchEl = document.getElementById("pipeline-search-clear");
@@ -405,6 +423,16 @@ const PipelineView = (() => {
     const clearFiltersEl = document.getElementById("pipeline-clear-filters");
     const exportBtn = document.getElementById("btn-export");
     const importBtn = document.getElementById("btn-import");
+    const wrap = document.querySelector('.kanban-wrap');
+
+    if (wrap) {
+      wrap.addEventListener("wheel", (e) => {
+        if (e.deltaY !== 0 && !e.shiftKey) {
+          e.preventDefault();
+          wrap.scrollLeft += e.deltaY;
+        }
+      });
+    }
 
     if (searchEl)
       searchEl.addEventListener("input", (e) => {
@@ -498,6 +526,8 @@ const PipelineView = (() => {
       const el = document.querySelector(`.lead-card[data-id="${id}"]`);
       if (el) el.classList.add("is-dragging");
     }, 0);
+
+    document.addEventListener("dragover", _autoScroll);
   }
 
   function _onDragEnd(e) {
@@ -508,6 +538,8 @@ const PipelineView = (() => {
       .querySelectorAll(".drop-zone")
       .forEach((el) => el.classList.remove("drop-zone--over"));
     _dragId = null;
+    
+    document.removeEventListener("dragover", _autoScroll);
   }
 
   function _onDragOver(e) {
@@ -536,6 +568,114 @@ const PipelineView = (() => {
 
   function _onCardClick(id) {
     if (_onOpenLead) _onOpenLead(id);
+  }
+
+  /* ─── Context Menu ─── */
+
+  function _onContextMenu(e, id) {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Eliminar menú previo si existe
+    _closeContextMenu();
+
+    const menu = document.createElement("div");
+    menu.id = "pipeline-context-menu";
+    menu.className = "context-menu";
+    menu.style.left = `${e.pageX}px`;
+    menu.style.top = `${e.pageY}px`;
+
+    menu.innerHTML = `
+      <div class="context-menu-item" id="ctx-move">⇋ Mover etapa</div>
+      <div class="context-menu-item context-menu-item--danger" id="ctx-delete">✕ Eliminar</div>
+    `;
+
+    document.body.appendChild(menu);
+
+    document.getElementById("ctx-move").addEventListener("click", () => {
+      _closeContextMenu();
+      _openMoveModal(id);
+    });
+
+    document.getElementById("ctx-delete").addEventListener("click", () => {
+      _closeContextMenu();
+      App.showConfirm(
+        "¿Eliminar este lead?",
+        "Esta acción no se puede deshacer.",
+        () => {
+          Store.remove(id);
+          App.showToast("Lead eliminado");
+          // App ya renderiza pipeline vía suscripción
+        }
+      );
+    });
+
+    // Cerrar al clickear afuera
+    document.addEventListener("click", _closeContextMenu);
+  }
+
+  function _closeContextMenu() {
+    const menu = document.getElementById("pipeline-context-menu");
+    if (menu) menu.remove();
+    document.removeEventListener("click", _closeContextMenu);
+  }
+
+  function _openMoveModal(id) {
+    const lead = Store.getById(id);
+    if (!lead) return;
+
+    const stages = Store.getSettings().stages;
+    const stageOpts = stages
+      .map(
+        (s) =>
+          `<div class="modal-stage-option ${lead.stage === s.id ? "active" : ""}" data-stage-id="${s.id}">
+            <span class="kanban-col-dot" style="background:${s.color}"></span>
+            ${Utils.esc(s.label)}
+          </div>`
+      )
+      .join("");
+
+    const modalId = "portal-modal";
+    const container = document.getElementById(modalId) || document.createElement("div");
+    if (!document.getElementById(modalId)) {
+      container.id = modalId;
+      document.body.appendChild(container);
+    }
+
+    container.innerHTML = `
+      <div class="confirm-overlay" id="move-modal-overlay">
+        <div class="confirm-box" style="padding:0; overflow:hidden">
+          <div style="padding:16px; border-bottom:1px solid var(--border); font-weight:600">
+            Mover: ${Utils.esc(lead.name)}
+          </div>
+          <div style="max-height:300px; overflow-y:auto; padding:8px">
+            ${stageOpts}
+          </div>
+          <div style="padding:12px; border-top:1px solid var(--border); text-align:right">
+            <button class="btn" id="move-modal-cancel">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById("move-modal-cancel").addEventListener("click", () => {
+      container.innerHTML = "";
+    });
+
+    document.getElementById("move-modal-overlay").addEventListener("click", (e) => {
+      if (e.target.id === "move-modal-overlay") container.innerHTML = "";
+    });
+
+    container.querySelectorAll(".modal-stage-option").forEach((opt) => {
+      opt.addEventListener("click", (e) => {
+        const stageId = e.currentTarget.dataset.stageId;
+        if (stageId !== lead.stage) {
+          Store.moveToStage(id, stageId);
+          App.showToast(`Movido a ${Utils.stageLabel(stageId)}`, "success");
+        }
+        container.innerHTML = "";
+      });
+    });
   }
 
   /* ─── Backup ─── */
@@ -572,5 +712,6 @@ const PipelineView = (() => {
     _onDragLeave,
     _onDrop,
     _onCardClick,
+    _onContextMenu,
   };
 })();

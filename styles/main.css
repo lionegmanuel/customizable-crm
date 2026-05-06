@@ -100,12 +100,15 @@ textarea {
 }
 
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 3px;
+  background: var(--border-hover);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -617,6 +620,60 @@ tbody tr {
 /* ============================================================
    11. COMPONENTS — Badges
    ============================================================ */
+.context-menu {
+  position: absolute;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  padding: 6px;
+  z-index: 1000;
+  min-width: 140px;
+}
+
+.context-menu-item {
+  padding: 8px 12px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.context-menu-item:hover {
+  background: var(--bg-card);
+}
+
+.context-menu-item--danger {
+  color: var(--red);
+}
+
+.context-menu-item--danger:hover {
+  background: var(--red-dim);
+}
+
+.modal-stage-option {
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.modal-stage-option:hover {
+  background: var(--bg-card);
+}
+
+.modal-stage-option.active {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+}
+
 .stage-badge {
   display: inline-flex;
   align-items: center;
