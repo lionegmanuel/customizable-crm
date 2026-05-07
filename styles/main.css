@@ -100,15 +100,12 @@ textarea {
 }
 
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border-hover);
-  border-radius: 4px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: var(--text-tertiary);
+  background: var(--border);
+  border-radius: 3px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -337,6 +334,45 @@ textarea {
 .kanban-wrap {
   overflow-x: auto;
   padding-bottom: 10px;
+}
+
+.kanban-top-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin-bottom: 8px;
+}
+
+.kanban-top-scroll-inner {
+  height: 1px;
+}
+
+.kanban-wrap, .kanban-top-scroll {
+  /* Scrollbar personalizado y amigable solo para Kanban horizontal */
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-hover) var(--bg-surface);
+}
+
+.kanban-wrap::-webkit-scrollbar,
+.kanban-top-scroll::-webkit-scrollbar {
+  height: 12px;
+}
+
+.kanban-wrap::-webkit-scrollbar-thumb,
+.kanban-top-scroll::-webkit-scrollbar-thumb {
+  background: var(--border-hover);
+  border-radius: 6px;
+  border: 3px solid var(--bg-surface);
+}
+
+.kanban-wrap::-webkit-scrollbar-thumb:hover,
+.kanban-top-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+.kanban-wrap::-webkit-scrollbar-track,
+.kanban-top-scroll::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+  border-radius: 6px;
 }
 
 .kanban {

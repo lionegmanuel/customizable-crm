@@ -333,7 +333,13 @@ const PipelineView = (() => {
     const cols = stages
       .map((s) => _renderColumn(s, groupedLeads.get(s.id) || [], followupDays))
       .join("");
-    return `<div class="kanban-wrap"><div class="kanban">${cols}</div></div>`;
+    return `
+      <div class="kanban-top-scroll" id="kanban-top-scroll">
+        <div class="kanban-top-scroll-inner" id="kanban-top-scroll-inner"></div>
+      </div>
+      <div class="kanban-wrap" id="kanban-wrap">
+        <div class="kanban" id="kanban-content">${cols}</div>
+      </div>`;
   }
 
   function _groupLeadsByStage(leads) {
@@ -397,23 +403,76 @@ const PipelineView = (() => {
     </div>`;
   }
 
-  /* ─── Drag & Drop ─── */
+  /* ─── Drag & Drop y Scroll ─── */
 
-  let _scrollInterval = null;
+  let _scrollRaf = null;
+  let _scrollSpeed = 0;
+
+  function _autoScrollLoop() {
+    const wrap = document.getElementById('kanban-wrap');
+    if (!wrap || _scrollSpeed === 0) {
+      if (_scrollRaf) cancelAnimationFrame(_scrollRaf);
+      _scrollRaf = null;
+      return;
+    }
+    wrap.scrollLeft += _scrollSpeed;
+    _scrollRaf = requestAnimationFrame(_autoScrollLoop);
+  }
 
   function _autoScroll(e) {
-    const wrap = document.querySelector('.kanban-wrap');
+    const wrap = document.getElementById('kanban-wrap');
     if (!wrap) return;
 
-    const threshold = 100; // px
-    const speed = 15; // px
+    const threshold = 120; // px desde el borde
+    const maxSpeed = 25; // px por frame
     const rect = wrap.getBoundingClientRect();
     
+    // Calcular velocidad basada en proximidad al borde
     if (e.clientX < rect.left + threshold) {
-      wrap.scrollLeft -= speed;
+      const distance = rect.left + threshold - e.clientX;
+      _scrollSpeed = -Math.max(2, (distance / threshold) * maxSpeed);
     } else if (e.clientX > rect.right - threshold) {
-      wrap.scrollLeft += speed;
+      const distance = e.clientX - (rect.right - threshold);
+      _scrollSpeed = Math.max(2, (distance / threshold) * maxSpeed);
+    } else {
+      _scrollSpeed = 0;
     }
+
+    if (_scrollSpeed !== 0 && !_scrollRaf) {
+      _scrollRaf = requestAnimationFrame(_autoScrollLoop);
+    }
+  }
+
+  function _syncScrollBars() {
+    const topScroll = document.getElementById("kanban-top-scroll");
+    const topScrollInner = document.getElementById("kanban-top-scroll-inner");
+    const wrap = document.getElementById("kanban-wrap");
+    const content = document.getElementById("kanban-content");
+
+    if (!topScroll || !topScrollInner || !wrap || !content) return;
+
+    // Actualizar ancho del track falso superior para que coincida con el contenido real
+    topScrollInner.style.width = `${content.scrollWidth}px`;
+
+    // Sincronizar eventos de scroll bidireccionalmente
+    let isSyncingTop = false;
+    let isSyncingWrap = false;
+
+    topScroll.addEventListener("scroll", () => {
+      if (!isSyncingTop) {
+        isSyncingWrap = true;
+        wrap.scrollLeft = topScroll.scrollLeft;
+      }
+      isSyncingTop = false;
+    });
+
+    wrap.addEventListener("scroll", () => {
+      if (!isSyncingWrap) {
+        isSyncingTop = true;
+        topScroll.scrollLeft = wrap.scrollLeft;
+      }
+      isSyncingWrap = false;
+    });
   }
 
   function _attachDragHandlers() {
@@ -423,15 +482,13 @@ const PipelineView = (() => {
     const clearFiltersEl = document.getElementById("pipeline-clear-filters");
     const exportBtn = document.getElementById("btn-export");
     const importBtn = document.getElementById("btn-import");
-    const wrap = document.querySelector('.kanban-wrap');
+    const wrap = document.getElementById('kanban-wrap');
+
+    _syncScrollBars();
 
     if (wrap) {
-      wrap.addEventListener("wheel", (e) => {
-        if (e.deltaY !== 0 && !e.shiftKey) {
-          e.preventDefault();
-          wrap.scrollLeft += e.deltaY;
-        }
-      });
+      // Eliminar el comportamiento de wheel que interfería con el scroll vertical
+      // wrap.addEventListener("wheel", (e) => { ... });
     }
 
     if (searchEl)
@@ -540,6 +597,11 @@ const PipelineView = (() => {
     _dragId = null;
     
     document.removeEventListener("dragover", _autoScroll);
+    _scrollSpeed = 0;
+    if (_scrollRaf) {
+      cancelAnimationFrame(_scrollRaf);
+      _scrollRaf = null;
+    }
   }
 
   function _onDragOver(e) {
