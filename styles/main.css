@@ -223,7 +223,8 @@ textarea {
   font-weight: 500;
   padding: 8px 16px;
   border-radius: var(--r-sm);
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform: translateZ(0);
 }
 
 .tab:hover {
@@ -263,18 +264,20 @@ textarea {
   font-size: 13px;
   font-weight: 500;
   color: var(--text-primary);
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
   white-space: nowrap;
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 .btn:hover {
   background: rgba(255, 255, 255, 0.1);
   border-color: var(--border-hover);
-  transform: scale(0.98);
+  transform: translateZ(0) scale(0.98);
 }
 
 .btn:active {
-  transform: scale(0.95);
+  transform: translateZ(0) scale(0.95);
 }
 
 .btn:hover {
@@ -293,7 +296,7 @@ textarea {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
   box-shadow: 0 4px 15px rgba(41, 151, 255, 0.3);
-  transform: translateY(-1px);
+  transform: translateZ(0) translateY(-1px) scale(0.98);
 }
 
 .btn--sm {
@@ -311,7 +314,7 @@ textarea {
   background: #ff2419;
   border-color: #ff2419;
   box-shadow: 0 4px 15px rgba(255, 59, 48, 0.3);
-  transform: translateY(-1px);
+  transform: translateZ(0) translateY(-1px) scale(0.98);
 }
 
 .btn--wa {
@@ -350,10 +353,13 @@ textarea {
   border-radius: var(--r-xl);
   padding: 18px 20px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transform: translateZ(0);
+  will-change: transform, box-shadow;
+  backface-visibility: hidden;
 }
 .metric-card:hover {
-  transform: translateY(-2px);
+  transform: translateZ(0) translateY(-2px);
   box-shadow: 0 8px 20px rgba(0,0,0,0.15);
 }
 
@@ -388,6 +394,9 @@ textarea {
 .kanban-wrap {
   overflow-x: auto;
   padding-bottom: 10px;
+  transform: translateZ(0);
+  -webkit-overflow-scrolling: touch;
+  will-change: scroll-position;
 }
 
 .kanban-top-scroll {
@@ -426,6 +435,9 @@ textarea {
   padding: var(--sp-3);
   display: flex;
   flex-direction: column;
+  transform: translateZ(0);
+  will-change: transform;
+  contain: content;
 }
 
 .kanban-col-header {
@@ -474,7 +486,7 @@ textarea {
   min-height: 36px;
   border-radius: var(--r-md);
   border: 2px dashed transparent;
-  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: border-color 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), background-color 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
   padding: 4px;
 }
 
@@ -495,8 +507,11 @@ textarea {
   padding: 12px;
   margin-bottom: 8px;
   cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
   box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transform: translateZ(0);
+  will-change: transform, box-shadow;
+  backface-visibility: hidden;
 }
 
 .lead-card:last-child {
@@ -504,12 +519,12 @@ textarea {
 }
 .lead-card:hover {
   border-color: rgba(255, 255, 255, 0.2);
-  transform: translateY(-2px);
+  transform: translateZ(0) translateY(-2px);
   box-shadow: 0 6px 16px rgba(0,0,0,0.3);
 }
 .lead-card.is-dragging {
   opacity: 0.4;
-  transform: scale(0.97);
+  transform: translateZ(0) scale(0.97);
 }
 .lead-card.is-drag-over {
   border-color: var(--accent);
@@ -730,7 +745,7 @@ tbody tr {
   color: var(--text-primary);
   cursor: pointer;
   border-radius: 6px;
-  transition: background 0.15s;
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .context-menu-item:hover {
@@ -773,10 +788,11 @@ tbody tr {
   margin-bottom: 6px;
   font-size: 14px;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: background-color 0.2s ease, color 0.2s ease;
   display: flex;
   align-items: center;
   gap: 10px;
+  transform: translateZ(0);
 }
 .modal-stage-option:hover {
   background: rgba(255, 255, 255, 0.05);
@@ -884,6 +900,8 @@ tbody tr {
   flex-direction: column;
   animation: slideIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
   box-shadow: -10px 0 30px rgba(0,0,0,0.3);
+  transform: translateZ(0);
+  will-change: transform;
 }
 
 @keyframes slideIn {
@@ -953,8 +971,9 @@ tbody tr {
   color: var(--text-secondary);
   padding: 6px 10px;
   line-height: 1;
-  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: background-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
   flex-shrink: 0;
+  transform: translateZ(0);
 }
 
 .close-btn:hover {
@@ -977,7 +996,8 @@ textarea {
   color: var(--text-primary);
   outline: none;
   width: 100%;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  transform: translateZ(0);
 }
 
 input:focus,
@@ -1075,7 +1095,7 @@ select option {
   padding: 0;
   margin: 0;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 .f-tag-checkbox:checked {
   background: var(--accent);

@@ -401,7 +401,7 @@ const PipelineView = (() => {
         : `<span style="color:var(--text-tertiary);font-size:10px">${days}d</span>`;
 
     const tagsHtml = (lead.tags && lead.tags.length > 0)
-      ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0">${lead.tags.map(t => `<span style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);font-size:10px;padding:2px 6px;border-radius:12px;color:var(--text-secondary);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)">${Utils.esc(t)}</span>`).join('')}</div>`
+      ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0">${lead.tags.map(t => `<span style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);font-size:10px;padding:2px 6px;border-radius:12px;color:var(--text-secondary)">${Utils.esc(t)}</span>`).join('')}</div>`
       : "";
 
     return `<div class="lead-card"
