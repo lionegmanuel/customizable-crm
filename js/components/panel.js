@@ -286,7 +286,7 @@ const Panel = (() => {
       [
         "Etiquetas",
         (lead.tags && lead.tags.length > 0)
-          ? lead.tags.map(t => `<span style="background:var(--border);padding:2px 6px;border-radius:4px;font-size:11px;margin-right:4px">${Utils.esc(t)}</span>`).join('')
+          ? lead.tags.map(t => `<span style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);padding:4px 10px;border-radius:12px;font-size:12px;margin-right:6px;display:inline-block;margin-bottom:4px">${Utils.esc(t)}</span>`).join('')
           : "—",
       ],
       ["Seguidores", lead.seguidores ? Utils.fmtNumber(lead.seguidores) : "—"],
@@ -597,7 +597,7 @@ const Panel = (() => {
         <label class="field-label">Etiquetas</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px" id="f-tags-container">
           ${(settings.etiquetas || []).map(tag => `
-            <label style="display:flex;align-items:center;gap:4px;font-size:13px;background:var(--surface);padding:4px 8px;border-radius:4px;border:1px solid var(--border);cursor:pointer">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;background:rgba(255,255,255,0.05);padding:6px 12px;border-radius:16px;border:1px solid var(--border);cursor:pointer;transition:all 0.2s ease" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
               <input type="checkbox" value="${Utils.esc(tag)}" class="f-tag-checkbox" ${(lead.tags || []).includes(tag) ? 'checked' : ''} />
               ${Utils.esc(tag)}
             </label>
