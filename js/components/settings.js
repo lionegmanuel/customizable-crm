@@ -30,7 +30,8 @@ const SettingsView = (() => {
             ["canales", "Canales"],
             ["prioridades", "Prioridades"],
             ["temperaturas", "Temperaturas"],
-            ['ticket','Ticket'],
+            ["ticket","Ticket"],
+            ["etiquetas", "Etiquetas"],
           ]
             .map(
               ([id, label]) =>
@@ -115,6 +116,7 @@ const SettingsView = (() => {
       prioridades: "Prioridades",
       temperaturas: "Temperaturas",
       ticket: "Ticket",
+      etiquetas: "Etiquetas",
     };
 
     const rows = items

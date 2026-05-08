@@ -283,6 +283,12 @@ const Panel = (() => {
           ? `<span class="${Utils.priorityClass(lead.prioridad)}">${Utils.esc(lead.prioridad)}</span>`
           : "—",
       ],
+      [
+        "Etiquetas",
+        (lead.tags && lead.tags.length > 0)
+          ? lead.tags.map(t => `<span style="background:var(--border);padding:2px 6px;border-radius:4px;font-size:11px;margin-right:4px">${Utils.esc(t)}</span>`).join('')
+          : "—",
+      ],
       ["Seguidores", lead.seguidores ? Utils.fmtNumber(lead.seguidores) : "—"],
       ["Señales", Utils.esc(lead.señales || "—")],
     ]);
@@ -587,6 +593,17 @@ const Panel = (() => {
           ${Utils.buildStageSelect("f-stage", lead.stage || "identificado")}
         </div>
       </div>
+      <div class="field-group">
+        <label class="field-label">Etiquetas</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px" id="f-tags-container">
+          ${(settings.etiquetas || []).map(tag => `
+            <label style="display:flex;align-items:center;gap:4px;font-size:13px;background:var(--surface);padding:4px 8px;border-radius:4px;border:1px solid var(--border);cursor:pointer">
+              <input type="checkbox" value="${Utils.esc(tag)}" class="f-tag-checkbox" ${(lead.tags || []).includes(tag) ? 'checked' : ''} />
+              ${Utils.esc(tag)}
+            </label>
+          `).join('')}
+        </div>
+      </div>
 
       <div class="section-title">Scoring de prospección</div>
       <div class="field-row">
@@ -861,6 +878,8 @@ const Panel = (() => {
       return;
     }
 
+    const tags = Array.from(document.querySelectorAll('.f-tag-checkbox:checked')).map(cb => cb.value);
+
     const data = {
       name,
       whatsapp: (get("f-wa")?.value || "").trim(),
@@ -887,6 +906,7 @@ const Panel = (() => {
       prioridad: get("f-prio")?.value || "Media",
       seguidores: get("f-seg")?.value || "",
       stage: get("f-stage")?.value || "identificado",
+      tags: tags,
 
       commercialScore: (get("f-score-commercial")?.value || "").trim(),
       potentialScore: (get("f-score-potential")?.value || "").trim(),

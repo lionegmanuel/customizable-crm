@@ -227,11 +227,19 @@ const Store = (() => {
       stage: "identificado",
       temperatura: "Frío",
       prioridad: "Media",
+      tags: [],
       ...data,
       createdAt: now,
       lastActivity: now,
       timeline: [{ text: "Lead creado", date: now }],
     };
+
+    const stageLabel = Utils.stageLabel(lead.stage);
+    if (stageLabel === "PDF / Recurso pendiente" || stageLabel === "PDF / Recurso enviado" || stageLabel === "PDF / Recurdo enviado") {
+      const tagToApply = stageLabel === "PDF / Recurdo enviado" ? "PDF / Recurso enviado" : stageLabel;
+      if (!lead.tags) lead.tags = [];
+      if (!lead.tags.includes(tagToApply)) lead.tags.push(tagToApply);
+    }
     _leads.unshift(lead);
     _syncSearchIndex(lead);
     _persist({ ...lead });
@@ -253,6 +261,20 @@ const Store = (() => {
     const prev = _leads[idx];
 
     _leads[idx] = { ...prev, ...changes, lastActivity: now };
+
+    if (!_leads[idx].tags) {
+      _leads[idx].tags = [];
+    }
+
+    if (changes.stage) {
+      const stageLabel = Utils.stageLabel(changes.stage);
+      if (stageLabel === "PDF / Recurso pendiente" || stageLabel === "PDF / Recurso enviado" || stageLabel === "PDF / Recurdo enviado") {
+        const tagToApply = stageLabel === "PDF / Recurdo enviado" ? "PDF / Recurso enviado" : stageLabel;
+        if (!_leads[idx].tags.includes(tagToApply)) {
+          _leads[idx].tags.push(tagToApply);
+        }
+      }
+    }
 
     if (changes.stage && changes.stage !== prev.stage) {
       _leads[idx].timeline = [
@@ -380,6 +402,7 @@ const Store = (() => {
       prioridades: [...CRM_CONFIG.DEFAULTS.PRIORIDADES],
       temperaturas: [...CRM_CONFIG.DEFAULTS.TEMPERATURAS],
       ticket: [...CRM_CONFIG.DEFAULTS.TICKET],
+      etiquetas: [...(CRM_CONFIG.DEFAULTS.ETIQUETAS || ["PDF / Recurso pendiente", "PDF / Recurso enviado"])],
       followupDays: CRM_CONFIG.FOLLOWUP_THRESHOLD_DAYS,
     };
   }

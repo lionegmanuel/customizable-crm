@@ -80,6 +80,14 @@ const PipelineView = (() => {
 
     const activeFilters = Object.values(_filters).filter((value) => Utils.hasValue(value)).length;
 
+    let wrapScrollLeft = 0;
+    let wrapScrollTop = 0;
+    const wrap = document.getElementById("kanban-wrap");
+    if (wrap) {
+      wrapScrollLeft = wrap.scrollLeft;
+      wrapScrollTop = wrap.scrollTop;
+    }
+
     el.innerHTML = [
       _renderMetrics(leads, active, pipelineVal, alertCount),
       _renderToolbar(filteredLeads.length, options, activeFilters),
@@ -87,6 +95,14 @@ const PipelineView = (() => {
     ].join("");
 
     _attachDragHandlers();
+
+    const newWrap = document.getElementById("kanban-wrap");
+    const topScroll = document.getElementById("kanban-top-scroll");
+    if (newWrap) {
+      newWrap.scrollLeft = wrapScrollLeft;
+      newWrap.scrollTop = wrapScrollTop;
+      if (topScroll) topScroll.scrollLeft = wrapScrollLeft;
+    }
   }
 
   /* ─── Métricas resumen ─── */
@@ -384,6 +400,10 @@ const PipelineView = (() => {
         ? `<span class="alert-days">${days}d</span>`
         : `<span style="color:var(--text-tertiary);font-size:10px">${days}d</span>`;
 
+    const tagsHtml = (lead.tags && lead.tags.length > 0)
+      ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0">${lead.tags.map(t => `<span style="background:var(--surface-hover);font-size:10px;padding:2px 4px;border-radius:3px;color:var(--text-secondary)">${Utils.esc(t)}</span>`).join('')}</div>`
+      : "";
+
     return `<div class="lead-card"
         draggable="true"
         data-id="${lead.id}"
@@ -393,6 +413,7 @@ const PipelineView = (() => {
         onclick="PipelineView._onCardClick('${lead.id}')">
       <div class="lead-card-name">${Utils.esc(lead.name || "Sin nombre")}</div>
       <div class="lead-card-nicho">${Utils.esc(lead.nicho || "—")}</div>
+      ${tagsHtml}
       <div class="lead-card-footer">
         <span class="lead-card-ticket">${lead.ticket ? Utils.fmtCurrency(lead.ticket) : ""}</span>
         <div class="lead-card-meta">
@@ -649,6 +670,7 @@ const PipelineView = (() => {
 
     menu.innerHTML = `
       <div class="context-menu-item" id="ctx-move">⇋ Mover etapa</div>
+      <div class="context-menu-item" id="ctx-tag">🏷 Agregar etiqueta</div>
       <div class="context-menu-item context-menu-item--danger" id="ctx-delete">✕ Eliminar</div>
     `;
 
@@ -657,6 +679,11 @@ const PipelineView = (() => {
     document.getElementById("ctx-move").addEventListener("click", () => {
       _closeContextMenu();
       _openMoveModal(id);
+    });
+
+    document.getElementById("ctx-tag").addEventListener("click", () => {
+      _closeContextMenu();
+      _openTagModal(id);
     });
 
     document.getElementById("ctx-delete").addEventListener("click", () => {
@@ -737,6 +764,72 @@ const PipelineView = (() => {
         }
         container.innerHTML = "";
       });
+    });
+  }
+
+  function _openTagModal(id) {
+    const lead = Store.getById(id);
+    if (!lead) return;
+
+    const allTags = Store.getSettings().etiquetas || [];
+    const leadTags = lead.tags || [];
+    
+    const tagOpts = allTags
+      .map(
+        (t) =>
+          `<div class="modal-stage-option" style="display:flex;align-items:center;gap:8px" data-tag-val="${Utils.esc(t)}">
+            <input type="checkbox" ${leadTags.includes(t) ? "checked" : ""} style="pointer-events:none"/>
+            ${Utils.esc(t)}
+          </div>`
+      )
+      .join("");
+
+    const modalId = "portal-modal-tags";
+    const container = document.getElementById(modalId) || document.createElement("div");
+    if (!document.getElementById(modalId)) {
+      container.id = modalId;
+      document.body.appendChild(container);
+    }
+
+    container.innerHTML = `
+      <div class="confirm-overlay" id="tag-modal-overlay">
+        <div class="confirm-box" style="padding:0; overflow:hidden">
+          <div style="padding:16px; border-bottom:1px solid var(--border); font-weight:600">
+            Etiquetas: ${Utils.esc(lead.name)}
+          </div>
+          <div style="max-height:300px; overflow-y:auto; padding:8px" id="tag-list-container">
+            ${tagOpts || '<div style="padding:8px;text-align:center;color:var(--text-secondary)">No hay etiquetas configuradas.</div>'}
+          </div>
+          <div style="padding:12px; border-top:1px solid var(--border); display:flex; justify-content:space-between">
+             <button class="btn btn--primary" id="tag-modal-save">Guardar</button>
+             <button class="btn" id="tag-modal-cancel">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.getElementById("tag-modal-cancel").addEventListener("click", () => {
+      container.innerHTML = "";
+    });
+
+    document.getElementById("tag-modal-overlay").addEventListener("click", (e) => {
+      if (e.target.id === "tag-modal-overlay") container.innerHTML = "";
+    });
+
+    container.querySelectorAll(".modal-stage-option").forEach((opt) => {
+      opt.addEventListener("click", (e) => {
+        const checkbox = e.currentTarget.querySelector("input");
+        checkbox.checked = !checkbox.checked;
+      });
+    });
+
+    document.getElementById("tag-modal-save").addEventListener("click", () => {
+      const selectedTags = Array.from(container.querySelectorAll(".modal-stage-option input:checked")).map(
+        cb => cb.closest('.modal-stage-option').dataset.tagVal
+      );
+      Store.update(id, { tags: selectedTags });
+      App.showToast("Etiquetas guardadas", "success");
+      container.innerHTML = "";
     });
   }
 
