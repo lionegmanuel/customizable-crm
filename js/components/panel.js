@@ -597,7 +597,7 @@ const Panel = (() => {
         <label class="field-label">Etiquetas</label>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px" id="f-tags-container">
           ${(settings.etiquetas || []).map(tag => `
-            <label style="display:flex;align-items:center;gap:6px;font-size:13px;background:rgba(255,255,255,0.05);padding:6px 12px;border-radius:16px;border:1px solid var(--border);cursor:pointer;transition:background-color 0.2s ease;transform:translateZ(0)" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='rgba(255,255,255,0.05)'">
+            <label style="display:flex;align-items:center;gap:6px;font-size:13px;background:rgba(255,255,255,0.05);padding:6px 12px;border-radius:16px;border:1px solid var(--border);cursor:pointer;transition:background-color 0.2s ease" onmouseover="this.style.backgroundColor='rgba(255,255,255,0.1)'" onmouseout="this.style.backgroundColor='rgba(255,255,255,0.05)'">
               <input type="checkbox" value="${Utils.esc(tag)}" class="f-tag-checkbox" ${(lead.tags || []).includes(tag) ? 'checked' : ''} />
               ${Utils.esc(tag)}
             </label>
