@@ -9,6 +9,41 @@ const LeadsView = (() => {
   let _showAdvanced = false;
   let _renderTimer = null;
 
+  function _defaultFilters() {
+    return {
+      stage: "",
+      nicho: "",
+      subnicho: "",
+      canal: "",
+      ticketRango: "",
+      temperatura: "",
+      prioridad: "",
+      city: "",
+      province: "",
+      country: "",
+      targetCategory: "",
+      subCategory: "",
+      businessProfile: "",
+      companySize: "",
+      leadSource: "",
+      decisionMakerRole: "",
+      alignmentStatus: "",
+      hasEmail: "",
+      hasWhatsapp: "",
+      hasPhone: "",
+      hasWebsite: "",
+      hasLinkedin: "",
+      hasDecisionMaker: "",
+      scoreMin: "",
+      scoreMax: "",
+      potentialMin: "",
+      difficultyMax: "",
+      followersMin: "",
+      inactiveDaysMin: "",
+      inactiveDaysMax: "",
+    };
+  }
+
   function _queueRender(postRender = null, delay = 0) {
     if (_renderTimer) clearTimeout(_renderTimer);
     _renderTimer = setTimeout(() => {
