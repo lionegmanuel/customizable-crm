@@ -12,6 +12,8 @@ const PipelineView = (() => {
   let _filters = _defaultFilters();
   let _showAdvanced = false;
   let _renderTimer = null;
+  let _colLimits = {};
+  const COL_PAGE_SIZE = 50;
 
   function _defaultFilters() {
     return {
@@ -64,6 +66,7 @@ const PipelineView = (() => {
       _renderTimer = null;
     }
     _search = "";
+    _colLimits = {};
     _queueRender(() => {
       const searchEl = document.getElementById("pipeline-search");
       if (searchEl) searchEl.focus();
@@ -100,31 +103,46 @@ const PipelineView = (() => {
       (l) => Utils.daysSince(l.lastActivity) > followupDays,
     ).length;
 
+    // Limpiar límites al cambiar filtros globales
+    if (e?.type === "input" || e?.type === "change" || e?.type === "click") {
+      // Not actually needed here if handled on individual handlers, but better do it consistently inside handlers.
+    }
+
     const activeFilters = Object.values(_filters).filter((value) => Utils.hasValue(value)).length;
 
-    let wrapScrollLeft = 0;
-    let wrapScrollTop = 0;
-    const wrap = document.getElementById("kanban-wrap");
-    if (wrap) {
-      wrapScrollLeft = wrap.scrollLeft;
-      wrapScrollTop = wrap.scrollTop;
+    // Fast path: Si el esqueleto ya existe, actualizamos solo las partes necesarias
+    if (document.getElementById("pipeline-kanban-content")) {
+      document.getElementById("pipeline-metrics-slot").innerHTML = _renderMetrics(leads, active, pipelineVal, alertCount);
+      
+      // Actualizar solo las columnas (preserva el scroll del contenedor)
+      const groupedLeads = _groupLeadsByStage(filteredLeads);
+      const colsHtml = stages.map((s) => _renderColumn(s, groupedLeads.get(s.id) || [], followupDays)).join("");
+      document.getElementById("pipeline-kanban-content").innerHTML = colsHtml;
+      
+      // Sincronizar anchos de scroll
+      const content = document.getElementById("pipeline-kanban-content");
+      const topScrollInner = document.getElementById("kanban-top-scroll-inner");
+      if (topScrollInner && content) topScrollInner.style.width = `${content.scrollWidth}px`;
+
+      // Update count
+      const countEl = document.getElementById("pipeline-results-count");
+      if (countEl) countEl.textContent = \`\${filteredLeads.length} resultado\${filteredLeads.length !== 1 ? "s" : ""}\`;
+
+      // Update filter count on button if it exists
+      const toggleBtn = document.getElementById("pipeline-toggle-advanced");
+      if (toggleBtn) {
+        toggleBtn.textContent = _showAdvanced ? \`Ocultar filtros PRO (\${activeFilters})\` : \`Filtros PRO (\${activeFilters})\`;
+      }
+      return;
     }
 
     el.innerHTML = [
-      _renderMetrics(leads, active, pipelineVal, alertCount),
+      \`<div id="pipeline-metrics-slot">\${_renderMetrics(leads, active, pipelineVal, alertCount)}</div>\`,
       _renderToolbar(filteredLeads.length, options, activeFilters),
       _renderKanban(filteredLeads, stages, followupDays),
     ].join("");
 
     _attachDragHandlers();
-
-    const newWrap = document.getElementById("kanban-wrap");
-    const topScroll = document.getElementById("kanban-top-scroll");
-    if (newWrap) {
-      newWrap.scrollLeft = wrapScrollLeft;
-      newWrap.scrollTop = wrapScrollTop;
-      if (topScroll) topScroll.scrollLeft = wrapScrollLeft;
-    }
   }
 
   /* ─── Métricas resumen ─── */
@@ -218,7 +236,7 @@ const PipelineView = (() => {
           />
           ${_search.trim() ? '<button class="search-clear-btn" id="pipeline-search-clear" type="button" aria-label="Limpiar búsqueda">×</button>' : ""}
         </div>
-        <span class="text-muted text-sm pipeline-results">${resultsLabel}</span>
+        <span class="text-muted text-sm pipeline-results" id="pipeline-results-count">${resultsLabel}</span>
       </div>
       <div class="pipeline-toolbar-actions">
         <button class="btn btn--sm" id="btn-export">↓ Exportar backup</button>
@@ -376,7 +394,7 @@ const PipelineView = (() => {
         <div class="kanban-top-scroll-inner" id="kanban-top-scroll-inner"></div>
       </div>
       <div class="kanban-wrap" id="kanban-wrap">
-        <div class="kanban" id="kanban-content">${cols}</div>
+        <div class="kanban" id="pipeline-kanban-content">${cols}</div>
       </div>`;
   }
 
@@ -390,15 +408,28 @@ const PipelineView = (() => {
     return grouped;
   }
 
+  const _throttledDragOver = _throttle(_onDragOver, 100);
+
   function _renderColumn(stage, stageLeads, followupDays) {
     const val = stageLeads.reduce((a, l) => a + (Number(l.ticket) || 0), 0);
-    const cards = stageLeads
+    const limit = _colLimits[stage.id] || COL_PAGE_SIZE;
+    const visibleLeads = stageLeads.slice(0, limit);
+
+    const cards = visibleLeads
       .map((lead) => _renderCard(lead, followupDays))
       .join("");
 
+    const loadMoreHtml = stageLeads.length > limit 
+      ? `<div style="text-align:center; padding: 8px 0;">
+           <button class="btn btn--sm" onclick="PipelineView._loadMoreCol(event, '${stage.id}')" style="background:rgba(255,255,255,0.05); color:var(--text-secondary); width:100%">
+             Cargar más (${limit} de ${stageLeads.length})
+           </button>
+         </div>`
+      : "";
+
     return `<div class="kanban-col"
         data-stage="${stage.id}"
-        ondragover="PipelineView._onDragOver(event)"
+        ondragover="PipelineView._throttledDragOver(event)"
         ondrop="PipelineView._onDrop(event,'${stage.id}')"
         ondragleave="PipelineView._onDragLeave(event)">
       <div class="kanban-col-header">
@@ -411,6 +442,7 @@ const PipelineView = (() => {
       </div>
       <div class="drop-zone" id="dz-${stage.id}">
         ${cards || '<div style="height:30px"></div>'}
+        ${loadMoreHtml}
       </div>
     </div>`;
   }
@@ -539,7 +571,8 @@ const PipelineView = (() => {
         const { selectionStart, selectionEnd, value } = e.target;
         if (value === _search) return;
         _search = value;
-        _queueRender(() => _restoreSearchCursor(selectionStart, selectionEnd));
+        _colLimits = {};
+        _queueRender(() => _restoreSearchCursor(selectionStart, selectionEnd), 300);
       });
 
     if (searchEl)
@@ -564,6 +597,7 @@ const PipelineView = (() => {
     if (clearFiltersEl)
       clearFiltersEl.addEventListener("click", () => {
         _filters = _defaultFilters();
+        _colLimits = {};
         render();
       });
 
@@ -577,48 +611,20 @@ const PipelineView = (() => {
         if (_filters[key] === value) return;
 
         _filters = { ..._filters, [key]: value };
+        _colLimits = {};
         _queueRender();
       });
     });
 
     if (exportBtn) exportBtn.addEventListener("click", _handleExport);
-    if (importBtn) importBtn.addEventListener("click", _handleImport);
-  }
-
-  function _queueRender(postRender = null) {
-    if (_searchRenderRaf) cancelAnimationFrame(_searchRenderRaf);
-    _searchRenderRaf = requestAnimationFrame(() => {
-      _searchRenderRaf = null;
-      render();
-      if (typeof postRender === "function") postRender();
+    if (importBtn) importBtn.addEventListener("click", () => {
+      // wrap the existing handler or just assume Store handles it, but resetting _colLimits
+      _colLimits = {};
+      _handleImport();
     });
   }
 
-  function _clearSearch() {
-    if (!_search.trim()) return;
-    if (_searchRenderRaf) {
-      cancelAnimationFrame(_searchRenderRaf);
-      _searchRenderRaf = null;
-    }
-    _search = "";
-    _queueRender(() => {
-      const searchEl = document.getElementById("pipeline-search");
-      if (searchEl) searchEl.focus();
-    });
-  }
 
-  function _restoreSearchCursor(selectionStart, selectionEnd) {
-    const searchEl = document.getElementById("pipeline-search");
-    if (!searchEl) return;
-    searchEl.focus();
-
-    if (
-      typeof selectionStart === "number" &&
-      typeof selectionEnd === "number"
-    ) {
-      searchEl.setSelectionRange(selectionStart, selectionEnd);
-    }
-  }
 
   function _onDragStart(e, id) {
     _dragId = id;
@@ -647,15 +653,35 @@ const PipelineView = (() => {
     }
   }
 
+  // Debounce helper for drag handlers to avoid overwhelming the browser
+  function _throttle(func, limit) {
+    let inThrottle;
+    return function() {
+      const args = arguments;
+      const context = this;
+      if (!inThrottle) {
+        func.apply(context, args);
+        inThrottle = true;
+        setTimeout(() => inThrottle = false, limit);
+      }
+    }
+  }
+
   function _onDragOver(e) {
     e.preventDefault();
-    const dz = e.currentTarget.querySelector(".drop-zone");
-    if (dz) dz.classList.add("drop-zone--over");
+    const col = e.currentTarget;
+    if (!col._dzCache) col._dzCache = col.querySelector(".drop-zone");
+    if (col._dzCache && !col._dzCache.classList.contains("drop-zone--over")) {
+      col._dzCache.classList.add("drop-zone--over");
+    }
   }
 
   function _onDragLeave(e) {
-    const dz = e.currentTarget.querySelector(".drop-zone");
-    if (dz) dz.classList.remove("drop-zone--over");
+    const col = e.currentTarget;
+    if (!col._dzCache) col._dzCache = col.querySelector(".drop-zone");
+    if (col._dzCache) {
+      col._dzCache.classList.remove("drop-zone--over");
+    }
   }
 
   function _onDrop(e, stageId) {
@@ -666,6 +692,15 @@ const PipelineView = (() => {
     if (!_dragId) return;
     const lead = Store.getById(_dragId);
     if (!lead || lead.stage === stageId) return;
+    
+    // Al mover a una columna, asegurar que la tarjeta nueva sea visible 
+    // aumentando el límite temporalmente si está lleno
+    const countInTarget = Store.getAll().filter(l => l.stage === stageId).length;
+    const currentLimit = _colLimits[stageId] || COL_PAGE_SIZE;
+    if (countInTarget >= currentLimit) {
+        _colLimits[stageId] = currentLimit + 1;
+    }
+
     Store.moveToStage(_dragId, stageId);
     App.showToast(`Movido a ${Utils.stageLabel(stageId)}`);
     _dragId = null;
@@ -871,6 +906,7 @@ const PipelineView = (() => {
         () => {
           try {
             const count = Store.importJSON(json);
+            _colLimits = {}; // reset limits on import
             App.showToast(`${count} leads importados`, "success");
           } catch (err) {
             App.showToast("Archivo inválido", "danger");
@@ -885,10 +921,15 @@ const PipelineView = (() => {
     render,
     _onDragStart,
     _onDragEnd,
-    _onDragOver,
+    _throttledDragOver,
     _onDragLeave,
     _onDrop,
     _onCardClick,
     _onContextMenu,
+    _loadMoreCol: (e, stageId) => {
+      e.stopPropagation();
+      _colLimits[stageId] = (_colLimits[stageId] || COL_PAGE_SIZE) + COL_PAGE_SIZE;
+      render();
+    }
   };
 })();

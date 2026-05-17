@@ -8,6 +8,8 @@ const LeadsView = (() => {
   let _filters = _defaultFilters();
   let _showAdvanced = false;
   let _renderTimer = null;
+  let _limit = 50;
+  const PAGE_SIZE = 50;
 
   function _defaultFilters() {
     return {
@@ -60,6 +62,7 @@ const LeadsView = (() => {
       _renderTimer = null;
     }
     _search = "";
+    _limit = PAGE_SIZE;
     _queueRender(() => {
       const el = document.getElementById("leads-search");
       if (el) el.focus();
@@ -90,13 +93,52 @@ const LeadsView = (() => {
 
     const activeFilters = _activeFiltersCount();
 
+    const paginated = filtered.slice(0, _limit);
+
+    if (document.getElementById("leads-table-body")) {
+      // Actualización parcial muy rápida sin destruir el DOM principal
+      document.getElementById("leads-table-body").innerHTML = paginated.length 
+        ? paginated.map((lead) => _renderRow(lead, settings.followupDays)).join("")
+        : `<tr><td colspan="9"><div class="empty"><strong>Sin resultados</strong> Probá ajustar los filtros de búsqueda.</div></td></tr>`;
+      
+      const countEl = document.getElementById("leads-toolbar-count");
+      if (countEl) countEl.textContent = `${filtered.length} lead${filtered.length !== 1 ? "s" : ""}`;
+
+      const toggleBtn = document.getElementById("leads-toggle-advanced");
+      if (toggleBtn) toggleBtn.textContent = _showAdvanced ? `Ocultar filtros PRO (${activeFilters})` : `Filtros PRO (${activeFilters})`;
+      
+      _updateLoadMoreBtn(filtered.length);
+      return;
+    }
+
     el.innerHTML = [
       _renderFilters(options, activeFilters),
       _renderToolbar(filtered.length),
-      _renderTable(filtered, settings.followupDays),
+      _renderTable(paginated, settings.followupDays),
+      _renderLoadMoreBtn(filtered.length)
     ].join("");
 
     _attachHandlers();
+  }
+
+  function _updateLoadMoreBtn(totalFiltered) {
+    const btn = document.getElementById("leads-load-more");
+    const container = document.getElementById("leads-load-more-container");
+    if (!btn || !container) return;
+    
+    if (_limit >= totalFiltered) {
+      container.style.display = "none";
+    } else {
+      container.style.display = "flex";
+      btn.textContent = `Cargar más (Mostrando ${_limit} de ${totalFiltered})`;
+    }
+  }
+
+  function _renderLoadMoreBtn(totalFiltered) {
+    if (_limit >= totalFiltered) return '<div id="leads-load-more-container" style="display:none; padding:16px; justify-content:center"><button class="btn btn--sm" id="leads-load-more"></button></div>';
+    return `<div id="leads-load-more-container" style="display:flex; padding:16px; justify-content:center">
+      <button class="btn btn--sm" id="leads-load-more">Cargar más (Mostrando ${_limit} de ${totalFiltered})</button>
+    </div>`;
   }
 
   /* ─── Filtros ─── */
@@ -308,11 +350,44 @@ const LeadsView = (() => {
 
   function _renderToolbar(count) {
     return `<div class="actions-row">
-      <span class="text-muted text-sm">${count} lead${count !== 1 ? "s" : ""}</span>
+      <span class="text-muted text-sm" id="leads-toolbar-count">${count} lead${count !== 1 ? "s" : ""}</span>
       <div style="display:flex;gap:6px">
         <button class="btn btn--sm" id="btn-export-leads">↓ Exportar backup</button>
         <button class="btn btn--sm" id="btn-import-leads">↑ Importar</button>
       </div>
+    </div>`;
+  }
+
+  /* ─── Tabla ─── */
+
+  function _renderTable(leads, followupDays) {
+    const rows = leads.length
+      ? leads.map((lead) => _renderRow(lead, followupDays)).join("")
+      : `<tr><td colspan="9">
+          <div class="empty">
+            <strong>Sin resultados</strong>
+            Probá ajustar los filtros de búsqueda.
+          </div>
+         </td></tr>`;
+
+    return `<div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:20%">Nombre / Empresa</th>
+            <th style="width:15%">Nicho</th>
+            <th style="width:12%">Etapa</th>
+            <th style="width:8%">WA</th>
+            <th style="width:15%">Ticket</th>
+            <th style="width:12%">Temperatura</th>
+            <th style="width:10%">Prioridad</th>
+            <th style="width:8%">Inact.</th>
+          </tr>
+        </thead>
+        <tbody id="leads-table-body">
+          ${rows}
+        </tbody>
+      </table>
     </div>`;
   }
 
@@ -401,7 +476,8 @@ const LeadsView = (() => {
         const { selectionStart, selectionEnd, value } = e.target;
         if (value === _search) return;
         _search = value;
-        _queueRender(() => _restoreSearchCursor(selectionStart, selectionEnd));
+        _limit = PAGE_SIZE;
+        _queueRender(() => _restoreSearchCursor(selectionStart, selectionEnd), 300);
       });
 
     if (searchEl)
@@ -426,6 +502,7 @@ const LeadsView = (() => {
     if (clearFiltersEl)
       clearFiltersEl.addEventListener("click", () => {
         _filters = _defaultFilters();
+        _limit = PAGE_SIZE;
         render();
       });
 
@@ -439,6 +516,7 @@ const LeadsView = (() => {
         if (_filters[key] === value) return;
 
         _filters = { ..._filters, [key]: value };
+        _limit = PAGE_SIZE;
         _queueRender();
       });
     });
@@ -459,6 +537,7 @@ const LeadsView = (() => {
             () => {
               try {
                 const count = Store.importJSON(json);
+                _limit = PAGE_SIZE;
                 App.showToast(`${count} leads importados`, "success");
               } catch (err) {
                 App.showToast("Archivo inválido", "danger");
@@ -467,42 +546,17 @@ const LeadsView = (() => {
           );
         });
       });
-  }
 
-  function _queueRender(postRender = null) {
-    if (_searchRenderRaf) cancelAnimationFrame(_searchRenderRaf);
-    _searchRenderRaf = requestAnimationFrame(() => {
-      _searchRenderRaf = null;
-      render();
-      if (typeof postRender === "function") postRender();
-    });
-  }
-
-  function _clearSearch() {
-    if (!_search.trim()) return;
-    if (_searchRenderRaf) {
-      cancelAnimationFrame(_searchRenderRaf);
-      _searchRenderRaf = null;
-    }
-    _search = "";
-    _queueRender(() => {
-      const el = document.getElementById("leads-search");
-      if (el) el.focus();
-    });
-  }
-
-  function _restoreSearchCursor(selectionStart, selectionEnd) {
-    const searchEl = document.getElementById("leads-search");
-    if (!searchEl) return;
-    searchEl.focus();
-
-    if (
-      typeof selectionStart === "number" &&
-      typeof selectionEnd === "number"
-    ) {
-      searchEl.setSelectionRange(selectionStart, selectionEnd);
+    const loadMoreBtn = document.getElementById("leads-load-more");
+    if (loadMoreBtn) {
+      loadMoreBtn.addEventListener("click", () => {
+        _limit += PAGE_SIZE;
+        render();
+      });
     }
   }
+
+
 
   function _onRowClick(id) {
     if (_onOpenLead) _onOpenLead(id);
