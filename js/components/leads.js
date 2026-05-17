@@ -7,41 +7,28 @@ const LeadsView = (() => {
   let _search = "";
   let _filters = _defaultFilters();
   let _showAdvanced = false;
-  let _searchRenderRaf = null;
+  let _renderTimer = null;
 
-  function _defaultFilters() {
-    return {
-      stage: "",
-      nicho: "",
-      subnicho: "",
-      canal: "",
-      ticketRango: "",
-      temperatura: "",
-      prioridad: "",
-      city: "",
-      province: "",
-      country: "",
-      targetCategory: "",
-      subCategory: "",
-      businessProfile: "",
-      companySize: "",
-      leadSource: "",
-      decisionMakerRole: "",
-      alignmentStatus: "",
-      hasEmail: "",
-      hasWhatsapp: "",
-      hasPhone: "",
-      hasWebsite: "",
-      hasLinkedin: "",
-      hasDecisionMaker: "",
-      scoreMin: "",
-      scoreMax: "",
-      potentialMin: "",
-      difficultyMax: "",
-      followersMin: "",
-      inactiveDaysMin: "",
-      inactiveDaysMax: "",
-    };
+  function _queueRender(postRender = null, delay = 0) {
+    if (_renderTimer) clearTimeout(_renderTimer);
+    _renderTimer = setTimeout(() => {
+      _renderTimer = null;
+      render();
+      if (typeof postRender === "function") postRender();
+    }, delay);
+  }
+
+  function _clearSearch() {
+    if (!_search.trim()) return;
+    if (_renderTimer) {
+      clearTimeout(_renderTimer);
+      _renderTimer = null;
+    }
+    _search = "";
+    _queueRender(() => {
+      const el = document.getElementById("leads-search");
+      if (el) el.focus();
+    });
   }
 
   /* ─── API pública ─── */

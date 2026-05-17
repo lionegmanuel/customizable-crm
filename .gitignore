@@ -1,3 +1,24 @@
+# Dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Firebase Config (Sensible)
 js/firebase-config.js
-scripts/import_leads_firestore.js
+
+# Scripts de uso local o migraciones puntuales
 scripts/
+*.js.map
+
+# Logs e Ignorados del SO
+*.log
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archivos temporales o de entorno local
+.env
+.env.local
+.env.*.local
+.firebase/
+
