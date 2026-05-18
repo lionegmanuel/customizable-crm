@@ -406,8 +406,6 @@ const PipelineView = (() => {
     return grouped;
   }
 
-  const _throttledDragOver = _throttle(_onDragOver, 100);
-
   function _renderColumn(stage, stageLeads, followupDays) {
     const val = stageLeads.reduce((a, l) => a + (Number(l.ticket) || 0), 0);
     const limit = _colLimits[stage.id] || COL_PAGE_SIZE;
@@ -427,7 +425,7 @@ const PipelineView = (() => {
 
     return `<div class="kanban-col"
         data-stage="${stage.id}"
-        ondragover="PipelineView._throttledDragOver(event)"
+        ondragover="PipelineView._onDragOver(event)"
         ondrop="PipelineView._onDrop(event,'${stage.id}')"
         ondragleave="PipelineView._onDragLeave(event)">
       <div class="kanban-col-header">
@@ -919,7 +917,7 @@ const PipelineView = (() => {
     render,
     _onDragStart,
     _onDragEnd,
-    _throttledDragOver,
+    _onDragOver,
     _onDragLeave,
     _onDrop,
     _onCardClick,
