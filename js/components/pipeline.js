@@ -104,9 +104,7 @@ const PipelineView = (() => {
     ).length;
 
     // Limpiar límites al cambiar filtros globales
-    if (e?.type === "input" || e?.type === "change" || e?.type === "click") {
-      // Not actually needed here if handled on individual handlers, but better do it consistently inside handlers.
-    }
+    // Not actually needed here if handled on individual handlers, but better do it consistently inside handlers.
 
     const activeFilters = Object.values(_filters).filter((value) => Utils.hasValue(value)).length;
 
