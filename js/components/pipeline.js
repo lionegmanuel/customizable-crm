@@ -520,7 +520,7 @@ const PipelineView = (() => {
     const topScroll = document.getElementById("kanban-top-scroll");
     const topScrollInner = document.getElementById("kanban-top-scroll-inner");
     const wrap = document.getElementById("kanban-wrap");
-    const content = document.getElementById("kanban-content");
+    const content = document.getElementById("pipeline-kanban-content");
 
     if (!topScroll || !topScrollInner || !wrap || !content) return;
 
