@@ -126,18 +126,18 @@ const PipelineView = (() => {
 
       // Update count
       const countEl = document.getElementById("pipeline-results-count");
-      if (countEl) countEl.textContent = \`\${filteredLeads.length} resultado\${filteredLeads.length !== 1 ? "s" : ""}\`;
+      if (countEl) countEl.textContent = `${filteredLeads.length} resultado${filteredLeads.length !== 1 ? "s" : ""}`;
 
       // Update filter count on button if it exists
       const toggleBtn = document.getElementById("pipeline-toggle-advanced");
       if (toggleBtn) {
-        toggleBtn.textContent = _showAdvanced ? \`Ocultar filtros PRO (\${activeFilters})\` : \`Filtros PRO (\${activeFilters})\`;
+        toggleBtn.textContent = _showAdvanced ? `Ocultar filtros PRO (${activeFilters})` : `Filtros PRO (${activeFilters})`;
       }
       return;
     }
 
     el.innerHTML = [
-      \`<div id="pipeline-metrics-slot">\${_renderMetrics(leads, active, pipelineVal, alertCount)}</div>\`,
+      `<div id="pipeline-metrics-slot">${_renderMetrics(leads, active, pipelineVal, alertCount)}</div>`,
       _renderToolbar(filteredLeads.length, options, activeFilters),
       _renderKanban(filteredLeads, stages, followupDays),
     ].join("");
