@@ -454,6 +454,8 @@ const PipelineView = (() => {
       ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin:4px 0">${lead.tags.map(t => `<span style="background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.1);font-size:10px;padding:2px 6px;border-radius:12px;color:var(--text-secondary)">${Utils.esc(t)}</span>`).join('')}</div>`
       : "";
 
+    const lastMoveHtml = lead.lastActivity ? `<div style="font-size:10px;color:var(--text-secondary);margin-top:6px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.05);">Último movimiento: ${Utils.fmtDateTime(lead.lastActivity)}</div>` : "";
+
     return `<div class="lead-card"
         draggable="true"
         data-id="${lead.id}"
@@ -464,7 +466,8 @@ const PipelineView = (() => {
       <div class="lead-card-name">${Utils.esc(lead.name || "Sin nombre")}</div>
       <div class="lead-card-nicho">${Utils.esc(lead.nicho || "—")}</div>
       ${tagsHtml}
-      <div class="lead-card-footer">
+      ${lastMoveHtml}
+      <div class="lead-card-footer" style="margin-top:6px;">
         <span class="lead-card-ticket">${lead.ticket ? Utils.fmtCurrency(lead.ticket) : ""}</span>
         <div class="lead-card-meta">
           ${Utils.tempDotHtml(lead.temperatura)}

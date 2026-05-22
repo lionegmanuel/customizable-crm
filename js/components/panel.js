@@ -236,7 +236,7 @@ const Panel = (() => {
     const formatDateValue = (value) => {
       const raw = String(value || "").trim();
       if (!raw) return "—";
-      return Number.isNaN(new Date(raw).getTime()) ? Utils.esc(raw) : Utils.fmtDate(raw);
+      return Number.isNaN(new Date(raw).getTime()) ? Utils.esc(raw) : Utils.fmtDateTime(raw);
     };
 
     const rowsMain = renderRows([
@@ -343,8 +343,8 @@ const Panel = (() => {
       ["Prioridad de fuente", _hasValue(sourcePriority) ? Utils.esc(String(sourcePriority)) : "—"],
       ["Latitud", _hasValue(latitude) ? Utils.esc(String(latitude)) : "—"],
       ["Longitud", _hasValue(longitude) ? Utils.esc(String(longitude)) : "—"],
-      ["Creado", Utils.fmtDate(lead.createdAt)],
-      ["Última actividad", Utils.fmtDate(lead.lastActivity)],
+      ["Creado", Utils.fmtDateTime(lead.createdAt)],
+      ["Última actividad", Utils.fmtDateTime(lead.lastActivity)],
     ]);
 
     const notesHtml = lead.notas
@@ -363,7 +363,7 @@ const Panel = (() => {
         <div class="tl-dot"></div>
         <div>
           <div class="tl-content">${Utils.esc(t.text)}</div>
-          <div class="tl-date">${Utils.fmtDate(t.date)}</div>
+          <div class="tl-date">${Utils.fmtDateTime(t.date)}</div>
         </div>
       </div>`,
       )
