@@ -8,6 +8,7 @@ js/firebase-config.js
 
 # Scripts de uso local o migraciones puntuales
 scripts/
+generate-config.js
 *.js.map
 
 # Logs e Ignorados del SO
