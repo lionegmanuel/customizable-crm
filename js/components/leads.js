@@ -12,38 +12,8 @@ const LeadsView = (() => {
   const PAGE_SIZE = 50;
 
   function _defaultFilters() {
-    return {
-      stage: "",
-      nicho: "",
-      subnicho: "",
-      canal: "",
-      ticketRango: "",
-      temperatura: "",
-      prioridad: "",
-      city: "",
-      province: "",
-      country: "",
-      targetCategory: "",
-      subCategory: "",
-      businessProfile: "",
-      companySize: "",
-      leadSource: "",
-      decisionMakerRole: "",
-      alignmentStatus: "",
-      hasEmail: "",
-      hasWhatsapp: "",
-      hasPhone: "",
-      hasWebsite: "",
-      hasLinkedin: "",
-      hasDecisionMaker: "",
-      scoreMin: "",
-      scoreMax: "",
-      potentialMin: "",
-      difficultyMax: "",
-      followersMin: "",
-      inactiveDaysMin: "",
-      inactiveDaysMax: "",
-    };
+    return { stage: "" };
+  };
   }
 
   function _queueRender(postRender = null, delay = 0) {
@@ -172,28 +142,39 @@ const LeadsView = (() => {
       )
       .join("");
 
-    const quickNichoOpts = _renderOptionTags(options.nichos, _filters.nicho);
-    const priorityOpts = _renderOptionTags(options.prioridades, _filters.prioridad);
-    const subnichoOpts = _renderOptionTags(options.subnichos, _filters.subnicho);
-    const canalOpts = _renderOptionTags(options.canales, _filters.canal);
-    const tempOpts = _renderOptionTags(options.temperaturas, _filters.temperatura);
-    const ticketOpts = _renderOptionTags(options.ticketRangos, _filters.ticketRango);
-    const cityOpts = _renderOptionTags(options.city, _filters.city);
-    const provinceOpts = _renderOptionTags(options.province, _filters.province);
-    const countryOpts = _renderOptionTags(options.country, _filters.country);
-    const targetCategoryOpts = _renderOptionTags(
-      options.targetCategory,
-      _filters.targetCategory,
-    );
-    const subCategoryOpts = _renderOptionTags(options.subCategory, _filters.subCategory);
-    const profileOpts = _renderOptionTags(options.businessProfile, _filters.businessProfile);
-    const companySizeOpts = _renderOptionTags(options.companySize, _filters.companySize);
-    const sourceOpts = _renderOptionTags(options.leadSource, _filters.leadSource);
-    const roleOpts = _renderOptionTags(options.decisionMakerRole, _filters.decisionMakerRole);
-    const alignmentOpts = _renderOptionTags(
-      options.alignmentStatus,
-      _filters.alignmentStatus,
-    );
+    let basicSelects = `
+      <select data-leads-filter="stage" id="leads-filter-stage">
+        <option value="">Todas las etapas</option>
+        ${stageOpts}
+      </select>
+    `;
+
+    let advancedSelects = '';
+
+    (options._keys || []).forEach(key => {
+      if (key === 'stage') return;
+      const opts = _renderOptionTags(options[key], _filters[key]);
+      const label = Utils.getFilterLabel(key);
+      const isBasic = Utils.FILTER_CONFIG.basic.includes(key);
+
+      const selectHtml = `
+        <select data-leads-filter="${key}" id="leads-filter-${key}">
+          <option value="">Todos los ${label.toLowerCase()}</option>
+          ${opts}
+        </select>
+      `;
+
+      if (isBasic) {
+        basicSelects += selectHtml;
+      } else {
+        advancedSelects += `
+          <div class="filter-field">
+            <label>${label}</label>
+            <select data-leads-filter="${key}"><option value="">Todos</option>${opts}</select>
+          </div>
+        `;
+      }
+    });
 
     const advancedLabel = _showAdvanced
       ? `Ocultar filtros PRO (${activeFilters})`
@@ -204,145 +185,22 @@ const LeadsView = (() => {
         <div class="search-input-wrap">
           <input
             id="leads-search"
-            placeholder="Buscar por nombre, correo, teléfono, ciudad, web, decisor..."
+            placeholder="Buscar..."
             value="${Utils.esc(_search)}"
           />
-          ${_search.trim() ? '<button class="search-clear-btn" id="leads-search-clear" type="button" aria-label="Limpiar búsqueda">×</button>' : ""}
+          ${_search.trim() ? '<button class="search-clear-btn" id="leads-search-clear" type="button">×</button>' : ""}
         </div>
       </div>
 
       <div class="search-row search-row--tight">
-        <select data-leads-filter="stage" id="leads-filter-stage">
-          <option value="">Todas las etapas</option>
-          ${stageOpts}
-        </select>
-        <select data-leads-filter="nicho" id="leads-filter-nicho">
-          <option value="">Todos los nichos</option>
-          ${quickNichoOpts}
-        </select>
-        <select data-leads-filter="prioridad" id="leads-filter-prioridad">
-          <option value="">Todas las prioridades</option>
-          ${priorityOpts}
-        </select>
+        ${basicSelects}
         <button class="btn btn--sm" id="leads-toggle-advanced" type="button">${advancedLabel}</button>
         <button class="btn btn--sm" id="leads-clear-filters" type="button" ${activeFilters ? "" : "disabled"}>Limpiar filtros</button>
       </div>
 
       <div class="filters-advanced ${_showAdvanced ? "filters-advanced--open" : ""}" id="leads-advanced-wrap">
         <div class="filters-grid">
-          <div class="filter-field">
-            <label>Sub-nicho</label>
-            <select data-leads-filter="subnicho"><option value="">Todos</option>${subnichoOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Canal de contacto</label>
-            <select data-leads-filter="canal"><option value="">Todos</option>${canalOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Temperatura</label>
-            <select data-leads-filter="temperatura"><option value="">Todas</option>${tempOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Ticket</label>
-            <select data-leads-filter="ticketRango"><option value="">Todos</option>${ticketOpts}</select>
-          </div>
-
-          <div class="filter-field">
-            <label>Ciudad</label>
-            <select data-leads-filter="city"><option value="">Todas</option>${cityOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Provincia</label>
-            <select data-leads-filter="province"><option value="">Todas</option>${provinceOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>País</label>
-            <select data-leads-filter="country"><option value="">Todos</option>${countryOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Fuente del lead</label>
-            <select data-leads-filter="leadSource"><option value="">Todas</option>${sourceOpts}</select>
-          </div>
-
-          <div class="filter-field">
-            <label>Categoría objetivo</label>
-            <select data-leads-filter="targetCategory"><option value="">Todas</option>${targetCategoryOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Subcategoría</label>
-            <select data-leads-filter="subCategory"><option value="">Todas</option>${subCategoryOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Perfil comercial</label>
-            <select data-leads-filter="businessProfile"><option value="">Todos</option>${profileOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Tamaño de empresa</label>
-            <select data-leads-filter="companySize"><option value="">Todos</option>${companySizeOpts}</select>
-          </div>
-
-          <div class="filter-field">
-            <label>Rol del decisor</label>
-            <select data-leads-filter="decisionMakerRole"><option value="">Todos</option>${roleOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Estado de alineación</label>
-            <select data-leads-filter="alignmentStatus"><option value="">Todos</option>${alignmentOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Correo</label>
-            <select data-leads-filter="hasEmail">${_renderPresenceOptions(_filters.hasEmail)}</select>
-          </div>
-          <div class="filter-field">
-            <label>WhatsApp</label>
-            <select data-leads-filter="hasWhatsapp">${_renderPresenceOptions(_filters.hasWhatsapp)}</select>
-          </div>
-
-          <div class="filter-field">
-            <label>Teléfono</label>
-            <select data-leads-filter="hasPhone">${_renderPresenceOptions(_filters.hasPhone)}</select>
-          </div>
-          <div class="filter-field">
-            <label>Sitio web</label>
-            <select data-leads-filter="hasWebsite">${_renderPresenceOptions(_filters.hasWebsite)}</select>
-          </div>
-          <div class="filter-field">
-            <label>LinkedIn</label>
-            <select data-leads-filter="hasLinkedin">${_renderPresenceOptions(_filters.hasLinkedin)}</select>
-          </div>
-          <div class="filter-field">
-            <label>Datos de decisor</label>
-            <select data-leads-filter="hasDecisionMaker">${_renderPresenceOptions(_filters.hasDecisionMaker)}</select>
-          </div>
-
-          <div class="filter-field">
-            <label>Score comercial mínimo</label>
-            <input data-leads-filter="scoreMin" type="number" step="0.1" value="${Utils.esc(_filters.scoreMin)}" placeholder="70" />
-          </div>
-          <div class="filter-field">
-            <label>Score comercial máximo</label>
-            <input data-leads-filter="scoreMax" type="number" step="0.1" value="${Utils.esc(_filters.scoreMax)}" placeholder="100" />
-          </div>
-          <div class="filter-field">
-            <label>Potencial mínimo (1-5)</label>
-            <input data-leads-filter="potentialMin" type="number" min="1" max="5" step="1" value="${Utils.esc(_filters.potentialMin)}" placeholder="3" />
-          </div>
-          <div class="filter-field">
-            <label>Dificultad máxima (1-5)</label>
-            <input data-leads-filter="difficultyMax" type="number" min="1" max="5" step="1" value="${Utils.esc(_filters.difficultyMax)}" placeholder="3" />
-          </div>
-          <div class="filter-field">
-            <label>Seguidores mínimos</label>
-            <input data-leads-filter="followersMin" type="number" min="0" step="1" value="${Utils.esc(_filters.followersMin)}" placeholder="10000" />
-          </div>
-          <div class="filter-field">
-            <label>Días sin actividad mín.</label>
-            <input data-leads-filter="inactiveDaysMin" type="number" min="0" step="1" value="${Utils.esc(_filters.inactiveDaysMin)}" placeholder="3" />
-          </div>
-          <div class="filter-field">
-            <label>Días sin actividad máx.</label>
-            <input data-leads-filter="inactiveDaysMax" type="number" min="0" step="1" value="${Utils.esc(_filters.inactiveDaysMax)}" placeholder="30" />
-          </div>
+          ${advancedSelects}
         </div>
       </div>
     </div>`;
@@ -510,7 +368,7 @@ const LeadsView = (() => {
       const eventName = field.tagName === "SELECT" ? "change" : "input";
       field.addEventListener(eventName, (e) => {
         const key = e.currentTarget.dataset.leadsFilter;
-        if (!key || !(key in _filters)) return;
+        if (!key) return;
 
         const value = e.currentTarget.value || "";
         if (_filters[key] === value) return;

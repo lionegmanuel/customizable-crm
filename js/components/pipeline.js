@@ -16,38 +16,8 @@ const PipelineView = (() => {
   const COL_PAGE_SIZE = 50;
 
   function _defaultFilters() {
-    return {
-      stage: "",
-      nicho: "",
-      subnicho: "",
-      canal: "",
-      ticketRango: "",
-      temperatura: "",
-      prioridad: "",
-      city: "",
-      province: "",
-      country: "",
-      targetCategory: "",
-      subCategory: "",
-      businessProfile: "",
-      companySize: "",
-      leadSource: "",
-      decisionMakerRole: "",
-      alignmentStatus: "",
-      hasEmail: "",
-      hasWhatsapp: "",
-      hasPhone: "",
-      hasWebsite: "",
-      hasLinkedin: "",
-      hasDecisionMaker: "",
-      scoreMin: "",
-      scoreMax: "",
-      potentialMin: "",
-      difficultyMax: "",
-      followersMin: "",
-      inactiveDaysMin: "",
-      inactiveDaysMax: "",
-    };
+    return { stage: "" };
+  };
   }
 
   function _queueRender(postRender = null, delay = 0) {
@@ -190,6 +160,7 @@ const PipelineView = (() => {
 
   function _renderToolbar(filteredCount, options, activeFilters) {
     const resultsLabel = `${filteredCount} resultado${filteredCount !== 1 ? "s" : ""}`;
+    
     const stageOpts = (options.stages || [])
       .map(
         (stage) =>
@@ -197,28 +168,39 @@ const PipelineView = (() => {
       )
       .join("");
 
-    const quickNichoOpts = _renderOptionTags(options.nichos, _filters.nicho);
-    const priorityOpts = _renderOptionTags(options.prioridades, _filters.prioridad);
-    const subnichoOpts = _renderOptionTags(options.subnichos, _filters.subnicho);
-    const canalOpts = _renderOptionTags(options.canales, _filters.canal);
-    const tempOpts = _renderOptionTags(options.temperaturas, _filters.temperatura);
-    const ticketOpts = _renderOptionTags(options.ticketRangos, _filters.ticketRango);
-    const cityOpts = _renderOptionTags(options.city, _filters.city);
-    const provinceOpts = _renderOptionTags(options.province, _filters.province);
-    const countryOpts = _renderOptionTags(options.country, _filters.country);
-    const targetCategoryOpts = _renderOptionTags(
-      options.targetCategory,
-      _filters.targetCategory,
-    );
-    const subCategoryOpts = _renderOptionTags(options.subCategory, _filters.subCategory);
-    const profileOpts = _renderOptionTags(options.businessProfile, _filters.businessProfile);
-    const companySizeOpts = _renderOptionTags(options.companySize, _filters.companySize);
-    const sourceOpts = _renderOptionTags(options.leadSource, _filters.leadSource);
-    const roleOpts = _renderOptionTags(options.decisionMakerRole, _filters.decisionMakerRole);
-    const alignmentOpts = _renderOptionTags(
-      options.alignmentStatus,
-      _filters.alignmentStatus,
-    );
+    let basicSelects = `
+      <select data-pipeline-filter="stage" id="pipeline-filter-stage">
+        <option value="">Todas las etapas</option>
+        ${stageOpts}
+      </select>
+    `;
+
+    let advancedSelects = '';
+
+    (options._keys || []).forEach(key => {
+      if (key === 'stage') return;
+      const opts = _renderOptionTags(options[key], _filters[key]);
+      const label = Utils.getFilterLabel(key);
+      const isBasic = Utils.FILTER_CONFIG.basic.includes(key);
+
+      const selectHtml = `
+        <select data-pipeline-filter="${key}" id="pipeline-filter-${key}">
+          <option value="">Todos los ${label.toLowerCase()}</option>
+          ${opts}
+        </select>
+      `;
+
+      if (isBasic) {
+        basicSelects += selectHtml;
+      } else {
+        advancedSelects += `
+          <div class="filter-field">
+            <label>${label}</label>
+            <select data-pipeline-filter="${key}"><option value="">Todos</option>${opts}</select>
+          </div>
+        `;
+      }
+    });
 
     const advancedLabel = _showAdvanced
       ? `Ocultar filtros PRO (${activeFilters})`
@@ -229,152 +211,28 @@ const PipelineView = (() => {
         <div class="search-input-wrap">
           <input
             id="pipeline-search"
-            placeholder="Buscar por nombre, correo, teléfono, ciudad, web, decisor..."
+            placeholder="Buscar..."
             value="${Utils.esc(_search)}"
           />
-          ${_search.trim() ? '<button class="search-clear-btn" id="pipeline-search-clear" type="button" aria-label="Limpiar búsqueda">×</button>' : ""}
+          ${_search.trim() ? '<button class="search-clear-btn" id="pipeline-search-clear" type="button">×</button>' : ""}
         </div>
-        <span class="text-muted text-sm pipeline-results" id="pipeline-results-count">${resultsLabel}</span>
+        <span class="text-muted text-sm pipeline-results">${resultsLabel}</span>
       </div>
       <div class="pipeline-toolbar-actions">
-        <button class="btn btn--sm" id="btn-export">↓ Exportar backup</button>
-        <button class="btn btn--sm" id="btn-import">↑ Importar</button>
+        <button class="btn btn--sm" id="btn-export">Exportar</button>
+        <button class="btn btn--sm" id="btn-import">Importar</button>
       </div>
     </div>
 
     <div class="filters-card pipeline-filters-card">
       <div class="search-row search-row--tight">
-        <select data-pipeline-filter="stage" id="pipeline-filter-stage">
-          <option value="">Todas las etapas</option>
-          ${stageOpts}
-        </select>
-        <select data-pipeline-filter="nicho" id="pipeline-filter-nicho">
-          <option value="">Todos los nichos</option>
-          ${quickNichoOpts}
-        </select>
-        <select data-pipeline-filter="prioridad" id="pipeline-filter-prioridad">
-          <option value="">Todas las prioridades</option>
-          ${priorityOpts}
-        </select>
+        ${basicSelects}
         <button class="btn btn--sm" id="pipeline-toggle-advanced" type="button">${advancedLabel}</button>
         <button class="btn btn--sm" id="pipeline-clear-filters" type="button" ${activeFilters ? "" : "disabled"}>Limpiar filtros</button>
       </div>
-
       <div class="filters-advanced ${_showAdvanced ? "filters-advanced--open" : ""}" id="pipeline-advanced-wrap">
         <div class="filters-grid">
-          <div class="filter-field">
-            <label>Sub-nicho</label>
-            <select data-pipeline-filter="subnicho"><option value="">Todos</option>${subnichoOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Canal de contacto</label>
-            <select data-pipeline-filter="canal"><option value="">Todos</option>${canalOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Temperatura</label>
-            <select data-pipeline-filter="temperatura"><option value="">Todas</option>${tempOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Ticket</label>
-            <select data-pipeline-filter="ticketRango"><option value="">Todos</option>${ticketOpts}</select>
-          </div>
-
-          <div class="filter-field">
-            <label>Ciudad</label>
-            <select data-pipeline-filter="city"><option value="">Todas</option>${cityOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Provincia</label>
-            <select data-pipeline-filter="province"><option value="">Todas</option>${provinceOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>País</label>
-            <select data-pipeline-filter="country"><option value="">Todos</option>${countryOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Fuente del lead</label>
-            <select data-pipeline-filter="leadSource"><option value="">Todas</option>${sourceOpts}</select>
-          </div>
-
-          <div class="filter-field">
-            <label>Categoría objetivo</label>
-            <select data-pipeline-filter="targetCategory"><option value="">Todas</option>${targetCategoryOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Subcategoría</label>
-            <select data-pipeline-filter="subCategory"><option value="">Todas</option>${subCategoryOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Perfil comercial</label>
-            <select data-pipeline-filter="businessProfile"><option value="">Todos</option>${profileOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Tamaño de empresa</label>
-            <select data-pipeline-filter="companySize"><option value="">Todos</option>${companySizeOpts}</select>
-          </div>
-
-          <div class="filter-field">
-            <label>Rol del decisor</label>
-            <select data-pipeline-filter="decisionMakerRole"><option value="">Todos</option>${roleOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Estado de alineación</label>
-            <select data-pipeline-filter="alignmentStatus"><option value="">Todos</option>${alignmentOpts}</select>
-          </div>
-          <div class="filter-field">
-            <label>Correo</label>
-            <select data-pipeline-filter="hasEmail">${_renderPresenceOptions(_filters.hasEmail)}</select>
-          </div>
-          <div class="filter-field">
-            <label>WhatsApp</label>
-            <select data-pipeline-filter="hasWhatsapp">${_renderPresenceOptions(_filters.hasWhatsapp)}</select>
-          </div>
-
-          <div class="filter-field">
-            <label>Teléfono</label>
-            <select data-pipeline-filter="hasPhone">${_renderPresenceOptions(_filters.hasPhone)}</select>
-          </div>
-          <div class="filter-field">
-            <label>Sitio web</label>
-            <select data-pipeline-filter="hasWebsite">${_renderPresenceOptions(_filters.hasWebsite)}</select>
-          </div>
-          <div class="filter-field">
-            <label>LinkedIn</label>
-            <select data-pipeline-filter="hasLinkedin">${_renderPresenceOptions(_filters.hasLinkedin)}</select>
-          </div>
-          <div class="filter-field">
-            <label>Datos de decisor</label>
-            <select data-pipeline-filter="hasDecisionMaker">${_renderPresenceOptions(_filters.hasDecisionMaker)}</select>
-          </div>
-
-          <div class="filter-field">
-            <label>Score comercial mínimo</label>
-            <input data-pipeline-filter="scoreMin" type="number" step="0.1" value="${Utils.esc(_filters.scoreMin)}" placeholder="70" />
-          </div>
-          <div class="filter-field">
-            <label>Score comercial máximo</label>
-            <input data-pipeline-filter="scoreMax" type="number" step="0.1" value="${Utils.esc(_filters.scoreMax)}" placeholder="100" />
-          </div>
-          <div class="filter-field">
-            <label>Potencial mínimo (1-5)</label>
-            <input data-pipeline-filter="potentialMin" type="number" min="1" max="5" step="1" value="${Utils.esc(_filters.potentialMin)}" placeholder="3" />
-          </div>
-          <div class="filter-field">
-            <label>Dificultad máxima (1-5)</label>
-            <input data-pipeline-filter="difficultyMax" type="number" min="1" max="5" step="1" value="${Utils.esc(_filters.difficultyMax)}" placeholder="3" />
-          </div>
-          <div class="filter-field">
-            <label>Seguidores mínimos</label>
-            <input data-pipeline-filter="followersMin" type="number" min="0" step="1" value="${Utils.esc(_filters.followersMin)}" placeholder="10000" />
-          </div>
-          <div class="filter-field">
-            <label>Días sin actividad mín.</label>
-            <input data-pipeline-filter="inactiveDaysMin" type="number" min="0" step="1" value="${Utils.esc(_filters.inactiveDaysMin)}" placeholder="3" />
-          </div>
-          <div class="filter-field">
-            <label>Días sin actividad máx.</label>
-            <input data-pipeline-filter="inactiveDaysMax" type="number" min="0" step="1" value="${Utils.esc(_filters.inactiveDaysMax)}" placeholder="30" />
-          </div>
+          ${advancedSelects}
         </div>
       </div>
     </div>`;
@@ -604,7 +462,7 @@ const PipelineView = (() => {
       const eventName = field.tagName === "SELECT" ? "change" : "input";
       field.addEventListener(eventName, (e) => {
         const key = e.currentTarget.dataset.pipelineFilter;
-        if (!key || !(key in _filters)) return;
+        if (!key) return;
 
         const value = e.currentTarget.value || "";
         if (_filters[key] === value) return;

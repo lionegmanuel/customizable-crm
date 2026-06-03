@@ -225,119 +225,45 @@ const Utils = (() => {
     return true;
   }
 
-  function matchesLeadFilters(lead, filters = {}) {
-    const eq = (value, selected) =>
-      !selected || normalizeText(value) === normalizeText(selected);
+  
+  /* ---> DYNAMIC FILTER ENGINE <--- */
+  
+  const FILTER_CONFIG = {
+    // Definimos qu campos van en los filtros rpidos y en los PRO, y su mapeo.
+    // Tambin detectaremos automticamente los que no estn aqu.
+    basic: ['stage', 'nicho', 'prioridad'],
+    labels: {
+      stage: 'Etapa', nicho: 'Nicho', subnicho: 'Subnicho', canal: 'Canal',
+      ticketRango: 'Ticket', temperatura: 'Temperatura', prioridad: 'Prioridad',
+      city: 'Ciudad', province: 'Provincia', country: 'Pas',
+      targetCategory: 'Categora Objetivo', subCategory: 'Subcategora',
+      businessProfile: 'Perfil de Negocio', companySize: 'Tamao Empresa',
+      leadSource: 'Fuente del Lead', decisionMakerRole: 'Rol del Decisor',
+      alignmentStatus: 'Estado de Alineacin'
+    },
+    ignore: new Set(['id', 'createdAt', 'lastActivity', 'timeline', 'tags', 'score', 'potentialScore', 'difficultyScore', 'seguidores'])
+  };
 
-    if (filters.stage && (lead.stage || "") !== filters.stage) return false;
-    if (!eq(lead.nicho, filters.nicho)) return false;
-    if (!eq(lead.subnicho, filters.subnicho)) return false;
-    if (!eq(lead.canal, filters.canal)) return false;
-    if (!eq(lead.ticketRango, filters.ticketRango)) return false;
-    if (!eq(lead.temperatura, filters.temperatura)) return false;
-    if (!eq(lead.prioridad, filters.prioridad)) return false;
-
-    if (!eq(leadValue(lead, "city", "ciudad", "sourceCity"), filters.city))
-      return false;
-    if (
-      !eq(
-        leadValue(lead, "province", "provincia", "sourceProvince"),
-        filters.province,
-      )
-    )
-      return false;
-    if (!eq(leadValue(lead, "country", "pais", "sourceCountry"), filters.country))
-      return false;
-
-    if (
-      !eq(
-        leadValue(lead, "targetCategory", "categoriaObjetivo", "categoria_objetivo_archivo"),
-        filters.targetCategory,
-      )
-    )
-      return false;
-    if (!eq(leadValue(lead, "subCategory", "sub_nicho_categoria"), filters.subCategory))
-      return false;
-    if (!eq(leadValue(lead, "businessProfile", "perfil"), filters.businessProfile))
-      return false;
-    if (!eq(leadValue(lead, "companySize"), filters.companySize)) return false;
-    if (!eq(leadValue(lead, "leadSource", "fuente"), filters.leadSource))
-      return false;
-    if (!eq(leadValue(lead, "decisionMakerRole"), filters.decisionMakerRole))
-      return false;
-    if (!eq(leadValue(lead, "alignmentStatus", "estado_alineacion"), filters.alignmentStatus))
-      return false;
-
-    const hasEmail = hasValue(leadValue(lead, "email", "correo", "sourceEmail"));
-    if (!_matchesPresenceFilter(filters.hasEmail, hasEmail)) return false;
-
-    const hasWhatsapp = hasValue(leadValue(lead, "whatsapp"));
-    if (!_matchesPresenceFilter(filters.hasWhatsapp, hasWhatsapp)) return false;
-
-    const hasPhone = hasValue(
-      leadValue(lead, "phone", "telefono", "telefono_normalizado", "sourcePhone"),
-    );
-    if (!_matchesPresenceFilter(filters.hasPhone, hasPhone)) return false;
-
-    const hasWebsite = hasValue(
-      leadValue(lead, "website", "webProducto", "web_producto", "sourceWebsite"),
-    );
-    if (!_matchesPresenceFilter(filters.hasWebsite, hasWebsite)) return false;
-
-    const hasLinkedin = hasValue(leadValue(lead, "linkedin"));
-    if (!_matchesPresenceFilter(filters.hasLinkedin, hasLinkedin)) return false;
-
-    const hasDecisionMaker = hasValue(
-      leadValue(
-        lead,
-        "decisionMakerName",
-        "decisionMakerRole",
-        "decisionMakerEmail",
-        "decisionMakerPhone",
-      ),
-    );
-    if (!_matchesPresenceFilter(filters.hasDecisionMaker, hasDecisionMaker))
-      return false;
-
-    const score = _parseNumber(leadValue(lead, "commercialScore", "score", "sourceScore"));
-    if (!_matchesMinMax(score, filters.scoreMin, filters.scoreMax)) return false;
-
-    const potential = _parseNumber(leadValue(lead, "potentialScore", "potencial_1_5"));
-    if (!_matchesMinMax(potential, filters.potentialMin, "")) return false;
-
-    const difficulty = _parseNumber(leadValue(lead, "difficultyScore", "dificultad_1_5"));
-    if (!_matchesMinMax(difficulty, "", filters.difficultyMax)) return false;
-
-    const followers = _parseNumber(leadValue(lead, "seguidores"));
-    if (!_matchesMinMax(followers, filters.followersMin, "")) return false;
-
-    const inactiveDays = daysSince(lead.lastActivity);
-    if (!_matchesMinMax(inactiveDays, filters.inactiveDaysMin, filters.inactiveDaysMax))
-      return false;
-
-    return true;
+  function getDynamicFilterKeys(leads, settings) {
+    const keys = new Set(Object.keys(FILTER_CONFIG.labels));
+    leads.forEach(lead => {
+      Object.keys(lead).forEach(k => {
+        if (!FILTER_CONFIG.ignore.has(k) && typeof lead[k] === 'string') {
+          keys.add(k);
+        }
+      });
+    });
+    return Array.from(keys);
   }
 
   function collectLeadFilterOptions(leads = [], settings = Store.getSettings()) {
-    const createMap = () => new Map();
-    const fields = {
-      nichos: createMap(),
-      subnichos: createMap(),
-      canales: createMap(),
-      ticketRangos: createMap(),
-      temperaturas: createMap(),
-      prioridades: createMap(),
-      city: createMap(),
-      province: createMap(),
-      country: createMap(),
-      targetCategory: createMap(),
-      subCategory: createMap(),
-      businessProfile: createMap(),
-      companySize: createMap(),
-      leadSource: createMap(),
-      decisionMakerRole: createMap(),
-      alignmentStatus: createMap(),
+    const keys = getDynamicFilterKeys(leads, settings);
+    const result = {
+      _keys: keys,
+      stages: (settings.stages || []).map((stage) => ({ id: stage.id, label: stage.label }))
     };
+
+    keys.forEach(k => result[k] = new Map());
 
     const add = (map, value) => {
       const text = String(value || "").trim();
@@ -346,40 +272,71 @@ const Utils = (() => {
       if (!map.has(normalized)) map.set(normalized, text);
     };
 
-    (settings.nichos || []).forEach((value) => add(fields.nichos, value));
-    (settings.subnichos || []).forEach((value) => add(fields.subnichos, value));
-    (settings.canales || []).forEach((value) => add(fields.canales, value));
-    (settings.ticket || []).forEach((value) => add(fields.ticketRangos, value));
-    (settings.temperaturas || []).forEach((value) => add(fields.temperaturas, value));
-    (settings.prioridades || []).forEach((value) => add(fields.prioridades, value));
+    // Defaults from settings
+    if (settings.nichos) settings.nichos.forEach(v => add(result.nicho, v));
+    if (settings.subnichos) settings.subnichos.forEach(v => add(result.subnicho, v));
+    if (settings.canales) settings.canales.forEach(v => add(result.canal, v));
+    if (settings.ticket) settings.ticket.forEach(v => add(result.ticketRango, v));
+    if (settings.temperaturas) settings.temperaturas.forEach(v => add(result.temperatura, v));
+    if (settings.prioridades) settings.prioridades.forEach(v => add(result.prioridad, v));
 
     leads.forEach((lead) => {
-      add(fields.nichos, lead.nicho);
-      add(fields.subnichos, lead.subnicho);
-      add(fields.canales, lead.canal);
-      add(fields.ticketRangos, lead.ticketRango);
-      add(fields.temperaturas, lead.temperatura);
-      add(fields.prioridades, lead.prioridad);
-
-      add(fields.city, leadValue(lead, "city", "ciudad", "sourceCity"));
-      add(fields.province, leadValue(lead, "province", "provincia", "sourceProvince"));
-      add(fields.country, leadValue(lead, "country", "pais", "sourceCountry"));
-      add(
-        fields.targetCategory,
-        leadValue(lead, "targetCategory", "categoriaObjetivo", "categoria_objetivo_archivo"),
-      );
-      add(fields.subCategory, leadValue(lead, "subCategory", "sub_nicho_categoria"));
-      add(fields.businessProfile, leadValue(lead, "businessProfile", "perfil"));
-      add(fields.companySize, leadValue(lead, "companySize"));
-      add(fields.leadSource, leadValue(lead, "leadSource", "fuente"));
-      add(fields.decisionMakerRole, leadValue(lead, "decisionMakerRole"));
-      add(fields.alignmentStatus, leadValue(lead, "alignmentStatus", "estado_alineacion"));
+      keys.forEach(k => {
+        add(result[k], lead[k]);
+      });
+      // Fallbacks
+      add(result.city, leadValue(lead, "city", "ciudad", "sourceCity"));
+      add(result.province, leadValue(lead, "province", "provincia", "sourceProvince"));
+      add(result.country, leadValue(lead, "country", "pais", "sourceCountry"));
+      add(result.targetCategory, leadValue(lead, "targetCategory", "categoriaObjetivo", "categoria_objetivo_archivo"));
+      add(result.subCategory, leadValue(lead, "subCategory", "sub_nicho_categoria"));
+      add(result.businessProfile, leadValue(lead, "businessProfile", "perfil"));
+      add(result.leadSource, leadValue(lead, "leadSource", "fuente"));
+      add(result.alignmentStatus, leadValue(lead, "alignmentStatus", "estado_alineacion"));
     });
 
     const sortValues = (map) =>
       [...map.values()].sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
 
-    return {
+    keys.forEach(k => {
+      result[k] = sortValues(result[k]);
+    });
+
+    return result;
+  }
+
+  function matchesLeadFilters(lead, filters = {}) {
+    const eq = (value, selected) =>
+      !selected || normalizeText(value) === normalizeText(selected);
+
+    if (filters.stage && (lead.stage || "") !== filters.stage) return false;
+
+    // Check all dynamic string filters
+    for (const key of Object.keys(filters)) {
+      if (!filters[key] || key === 'stage') continue; // empty or already checked
+      
+      let val = lead[key];
+      // special fallbacks to maintain compatibility
+      if (key === 'city') val = leadValue(lead, "city", "ciudad", "sourceCity");
+      if (key === 'province') val = leadValue(lead, "province", "provincia", "sourceProvince");
+      if (key === 'country') val = leadValue(lead, "country", "pais", "sourceCountry");
+      if (key === 'targetCategory') val = leadValue(lead, "targetCategory", "categoriaObjetivo", "categoria_objetivo_archivo");
+      if (key === 'subCategory') val = leadValue(lead, "subCategory", "sub_nicho_categoria");
+      if (key === 'businessProfile') val = leadValue(lead, "businessProfile", "perfil");
+      if (key === 'leadSource') val = leadValue(lead, "leadSource", "fuente");
+      if (key === 'alignmentStatus') val = leadValue(lead, "alignmentStatus", "estado_alineacion");
+
+      if (!eq(val, filters[key])) return false;
+    }
+    return true;
+  }
+  
+  function getFilterLabel(key) {
+    if (FILTER_CONFIG.labels[key]) return FILTER_CONFIG.labels[key];
+    return key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim();
+  }
+
+  return {
       stages: (settings.stages || []).map((stage) => ({ id: stage.id, label: stage.label })),
       nichos: sortValues(fields.nichos),
       subnichos: sortValues(fields.subnichos),
@@ -425,5 +382,8 @@ const Utils = (() => {
     leadValue,
     matchesLeadFilters,
     collectLeadFilterOptions,
+    getDynamicFilterKeys,
+    getFilterLabel,
+    FILTER_CONFIG,
   };
 })();
