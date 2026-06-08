@@ -13,7 +13,6 @@ const LeadsView = (() => {
 
   function _defaultFilters() {
     return { stage: "" };
-  };
   }
 
   function _queueRender(postRender = null, delay = 0) {
