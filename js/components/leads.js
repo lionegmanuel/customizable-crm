@@ -66,29 +66,33 @@ const LeadsView = (() => {
     const paginated = filtered.slice(0, _limit);
 
     if (document.getElementById("leads-table-body")) {
+      // Actualizar toolbar con opciones siempre frescas
+      const filtersSlot = document.getElementById("leads-filters-slot");
+      if (filtersSlot) filtersSlot.innerHTML = _renderFilters(options, activeFilters);
+      
+      const toolbarSlot = document.getElementById("leads-toolbar-slot");
+      if (toolbarSlot) toolbarSlot.innerHTML = _renderToolbar(filtered.length);
+      
+      _attachToolbarHandlers();
+      
       // Actualización parcial muy rápida sin destruir el DOM principal
       document.getElementById("leads-table-body").innerHTML = paginated.length 
         ? paginated.map((lead) => _renderRow(lead, settings.followupDays)).join("")
         : `<tr><td colspan="9"><div class="empty"><strong>Sin resultados</strong> Probá ajustar los filtros de búsqueda.</div></td></tr>`;
-      
-      const countEl = document.getElementById("leads-toolbar-count");
-      if (countEl) countEl.textContent = `${filtered.length} lead${filtered.length !== 1 ? "s" : ""}`;
-
-      const toggleBtn = document.getElementById("leads-toggle-advanced");
-      if (toggleBtn) toggleBtn.textContent = _showAdvanced ? `Ocultar filtros PRO (${activeFilters})` : `Filtros PRO (${activeFilters})`;
       
       _updateLoadMoreBtn(filtered.length);
       return;
     }
 
     el.innerHTML = [
-      _renderFilters(options, activeFilters),
-      _renderToolbar(filtered.length),
+      `<div id="leads-filters-slot">${_renderFilters(options, activeFilters)}</div>`,
+      `<div id="leads-toolbar-slot">${_renderToolbar(filtered.length)}</div>`,
       _renderTable(paginated, settings.followupDays),
       _renderLoadMoreBtn(filtered.length)
     ].join("");
 
     _attachHandlers();
+    _attachToolbarHandlers();
   }
 
   function _updateLoadMoreBtn(totalFiltered) {
@@ -322,6 +326,16 @@ const LeadsView = (() => {
   /* ─── Event handlers ─── */
 
   function _attachHandlers() {
+    const loadMoreBtn = document.getElementById("leads-load-more");
+    if (loadMoreBtn) {
+      loadMoreBtn.addEventListener("click", () => {
+        _limit += PAGE_SIZE;
+        render();
+      });
+    }
+  }
+
+  function _attachToolbarHandlers() {
     const searchEl = document.getElementById("leads-search");
     const clearSearchEl = document.getElementById("leads-search-clear");
     const toggleAdvancedEl = document.getElementById("leads-toggle-advanced");
@@ -404,13 +418,13 @@ const LeadsView = (() => {
           );
         });
       });
+  }
 
-    const loadMoreBtn = document.getElementById("leads-load-more");
-    if (loadMoreBtn) {
-      loadMoreBtn.addEventListener("click", () => {
-        _limit += PAGE_SIZE;
-        render();
-      });
+  function _restoreSearchCursor(start, end) {
+    const searchEl = document.getElementById("leads-search");
+    if (searchEl) {
+      searchEl.focus();
+      searchEl.setSelectionRange(start, end);
     }
   }
 

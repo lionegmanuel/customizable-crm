@@ -42,7 +42,26 @@ const Utils = (() => {
 
   function daysSince(isoString) {
     if (!isoString) return 0;
-    return Math.floor((Date.now() - new Date(isoString).getTime()) / 864e5);
+    const start = new Date(isoString);
+    const end = new Date();
+    if (isNaN(start.getTime())) return 0;
+
+    const msDiff = end.getTime() - start.getTime();
+    if (msDiff <= 0) return 0;
+
+    const totalDays = Math.floor(msDiff / 86400000);
+    let weekendDays = 0;
+    
+    const currentDay = new Date(start);
+    for (let i = 0; i < totalDays; i++) {
+      currentDay.setDate(currentDay.getDate() + 1);
+      const dayOfWeek = currentDay.getDay();
+      if (dayOfWeek === 0 || dayOfWeek === 6) {
+        weekendDays++;
+      }
+    }
+    
+    return totalDays - weekendDays;
   }
 
   /* ─── Config lookups ─── */
@@ -334,27 +353,6 @@ const Utils = (() => {
   function getFilterLabel(key) {
     if (FILTER_CONFIG.labels[key]) return FILTER_CONFIG.labels[key];
     return key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim();
-  }
-
-  return {
-      stages: (settings.stages || []).map((stage) => ({ id: stage.id, label: stage.label })),
-      nichos: sortValues(fields.nichos),
-      subnichos: sortValues(fields.subnichos),
-      canales: sortValues(fields.canales),
-      ticketRangos: sortValues(fields.ticketRangos),
-      temperaturas: sortValues(fields.temperaturas),
-      prioridades: sortValues(fields.prioridades),
-      city: sortValues(fields.city),
-      province: sortValues(fields.province),
-      country: sortValues(fields.country),
-      targetCategory: sortValues(fields.targetCategory),
-      subCategory: sortValues(fields.subCategory),
-      businessProfile: sortValues(fields.businessProfile),
-      companySize: sortValues(fields.companySize),
-      leadSource: sortValues(fields.leadSource),
-      decisionMakerRole: sortValues(fields.decisionMakerRole),
-      alignmentStatus: sortValues(fields.alignmentStatus),
-    };
   }
 
   return {

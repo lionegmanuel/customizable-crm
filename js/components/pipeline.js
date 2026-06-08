@@ -82,6 +82,10 @@ const PipelineView = (() => {
     if (document.getElementById("pipeline-kanban-content")) {
       document.getElementById("pipeline-metrics-slot").innerHTML = _renderMetrics(leads, active, pipelineVal, alertCount);
       
+      // Actualizar toolbar con opciones siempre frescas
+      document.getElementById("pipeline-toolbar-slot").innerHTML = _renderToolbar(filteredLeads.length, options, activeFilters);
+      _attachToolbarHandlers();
+      
       // Actualizar solo las columnas (preserva el scroll del contenedor)
       const groupedLeads = _groupLeadsByStage(filteredLeads);
       const colsHtml = stages.map((s) => _renderColumn(s, groupedLeads.get(s.id) || [], followupDays)).join("");
@@ -92,25 +96,17 @@ const PipelineView = (() => {
       const topScrollInner = document.getElementById("kanban-top-scroll-inner");
       if (topScrollInner && content) topScrollInner.style.width = `${content.scrollWidth}px`;
 
-      // Update count
-      const countEl = document.getElementById("pipeline-results-count");
-      if (countEl) countEl.textContent = `${filteredLeads.length} resultado${filteredLeads.length !== 1 ? "s" : ""}`;
-
-      // Update filter count on button if it exists
-      const toggleBtn = document.getElementById("pipeline-toggle-advanced");
-      if (toggleBtn) {
-        toggleBtn.textContent = _showAdvanced ? `Ocultar filtros PRO (${activeFilters})` : `Filtros PRO (${activeFilters})`;
-      }
       return;
     }
 
     el.innerHTML = [
       `<div id="pipeline-metrics-slot">${_renderMetrics(leads, active, pipelineVal, alertCount)}</div>`,
-      _renderToolbar(filteredLeads.length, options, activeFilters),
+      `<div id="pipeline-toolbar-slot">${_renderToolbar(filteredLeads.length, options, activeFilters)}</div>`,
       _renderKanban(filteredLeads, stages, followupDays),
     ].join("");
 
     _attachDragHandlers();
+    _attachToolbarHandlers();
   }
 
   /* ─── Métricas resumen ─── */
@@ -408,12 +404,6 @@ const PipelineView = (() => {
   }
 
   function _attachDragHandlers() {
-    const searchEl = document.getElementById("pipeline-search");
-    const clearSearchEl = document.getElementById("pipeline-search-clear");
-    const toggleAdvancedEl = document.getElementById("pipeline-toggle-advanced");
-    const clearFiltersEl = document.getElementById("pipeline-clear-filters");
-    const exportBtn = document.getElementById("btn-export");
-    const importBtn = document.getElementById("btn-import");
     const wrap = document.getElementById('kanban-wrap');
 
     _syncScrollBars();
@@ -422,6 +412,15 @@ const PipelineView = (() => {
       // Eliminar el comportamiento de wheel que interfería con el scroll vertical
       // wrap.addEventListener("wheel", (e) => { ... });
     }
+  }
+
+  function _attachToolbarHandlers() {
+    const searchEl = document.getElementById("pipeline-search");
+    const clearSearchEl = document.getElementById("pipeline-search-clear");
+    const toggleAdvancedEl = document.getElementById("pipeline-toggle-advanced");
+    const clearFiltersEl = document.getElementById("pipeline-clear-filters");
+    const exportBtn = document.getElementById("btn-export");
+    const importBtn = document.getElementById("btn-import");
 
     if (searchEl)
       searchEl.addEventListener("input", (e) => {
@@ -475,10 +474,17 @@ const PipelineView = (() => {
 
     if (exportBtn) exportBtn.addEventListener("click", _handleExport);
     if (importBtn) importBtn.addEventListener("click", () => {
-      // wrap the existing handler or just assume Store handles it, but resetting _colLimits
       _colLimits = {};
       _handleImport();
     });
+  }
+
+  function _restoreSearchCursor(start, end) {
+    const searchEl = document.getElementById("pipeline-search");
+    if (searchEl) {
+      searchEl.focus();
+      searchEl.setSelectionRange(start, end);
+    }
   }
 
 
